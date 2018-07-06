@@ -1,0 +1,32 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven { url "https://dl.bintray.com/jetbrains/kotlin-native-dependencies" }
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-native-gradle-plugin:0.7.1"
+    }
+}
+
+apply plugin: 'konan'
+
+konan.targets = ['linux']
+
+konanArtifacts {
+    interop('sqlite3')
+
+    library('ksqlite') {
+        srcDir 'src/main/kotlin'
+        libraries {
+            artifact 'sqlite3'
+        }
+    }
+
+	program('test') {
+        srcDir 'src/test/kotlin'
+		libraries {
+			artifact 'ksqlite'
+		}
+        extraOpts '-tr'
+	}
+}
