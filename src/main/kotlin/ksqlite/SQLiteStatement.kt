@@ -31,8 +31,9 @@ class SQLiteStatement(private val db: SQLiteDatabase, sql: String) {
 		stmt = memScoped {
 			val stmtPtr = alloc<CPointerVar<sqlite3_stmt>>()
 			// Do something about the left over sql statement(s).
-			if (sqlite3_prepare_v3(db.db, sql, sql.length, 0, stmtPtr.ptr, null) != SQLITE_OK) {
-				throw SQLiteError("Cannot prepare stmt: ")
+			val result = sqlite3_prepare_v3(db.db, sql, sql.length, 0, stmtPtr.ptr, null)
+			if (result != SQLITE_OK) {
+				throw SQLiteError("Cannot prepare stmt: ${sqlite3_errstr(result)?.toKString()}")
 			}
 			stmtPtr.value
 		}

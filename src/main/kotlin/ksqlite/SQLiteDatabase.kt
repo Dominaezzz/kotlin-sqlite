@@ -140,6 +140,32 @@ class SQLiteDatabase(dbPath: String = ":memory:") {
 				SQLITE_OK
 			}
 
+			rawModule.xBestIndex = staticCFunction { pVTab, pIndexInfo ->
+				val virtualTable = pVTab!!.reinterpret<ksqlite_vtab>().pointed.userObj!!.asStableRef<SQLiteVirtualTable>().get()
+
+				val indexInfo = pIndexInfo!!.pointed
+
+				val bestIndexInfo = virtualTable.bestIndex(
+					Array(indexInfo.nConstraint, { index -> SQLiteIndexConstraint(indexInfo.aConstraint!![index].ptr) }),
+					Array(indexInfo.nOrderBy, { index -> SQLiteIndexOrderBy(indexInfo.aOrderBy!![index].ptr) }),
+					Array(indexInfo.nConstraint, { index -> SQLiteIndexConstraintUsage(indexInfo.aConstraintUsage!![index].ptr) })
+				)
+
+				indexInfo.idxNum = bestIndexInfo.idxNum
+				if (bestIndexInfo.idxStr != null) {
+					indexInfo.idxStr = sqlite3_mprintf(bestIndexInfo.idxStr)
+					indexInfo.needToFreeIdxStr = 1;
+				}
+
+				indexInfo.orderByConsumed = if (bestIndexInfo.orderByConsumed) 1 else 0
+				indexInfo.estimatedCost = bestIndexInfo.estimatedCost
+				indexInfo.estimatedRows = bestIndexInfo.estimatedRows
+				indexInfo.idxFlags = bestIndexInfo.idxFlags
+				indexInfo.colUsed = bestIndexInfo.columnsUsed
+
+				SQLITE_OK
+			}
+
 			rawModule.xOpen = staticCFunction { pVTab, ppCursor ->
 				val virtualTable = pVTab!!.reinterpret<ksqlite_vtab>().pointed.userObj!!.asStableRef<SQLiteVirtualTable>().get()
 
@@ -161,13 +187,13 @@ class SQLiteDatabase(dbPath: String = ":memory:") {
 
 			rawModule.xEof = staticCFunction { pCursor ->
 				if (pCursor!!.reinterpret<ksqlite_vtab_cursor>().pointed
-					.userObj!!.asStableRef<SQLiteVirtualTableCursor>().get().eof()) 1 else 0
+					.userObj!!.asStableRef<SQLiteVirtualTableCursor>().get().eof) 1 else 0
 			}
 
 			rawModule.xFilter = staticCFunction { pCursor, idxNum, idxStr, argc, argv ->
 				pCursor!!.reinterpret<ksqlite_vtab_cursor>().pointed
 					.userObj!!.asStableRef<SQLiteVirtualTableCursor>().get()
-					.filter(idxNum, idxStr!!.toKString(), SQLiteValues(argv!!, argc))
+					.filter(idxNum, idxStr?.toKString(), SQLiteValues(argv!!, argc))
 				SQLITE_OK
 			}
 
@@ -187,7 +213,7 @@ class SQLiteDatabase(dbPath: String = ":memory:") {
 
 			rawModule.xRowid = staticCFunction { pCursor, pRowid ->
 				pRowid!!.pointed.value = pCursor!!.reinterpret<ksqlite_vtab_cursor>().pointed
-					.userObj!!.asStableRef<SQLiteVirtualTableCursor>().get().rowId()
+					.userObj!!.asStableRef<SQLiteVirtualTableCursor>().get().rowId
 				SQLITE_OK
 			}
 
@@ -228,21 +254,21 @@ class SQLiteDatabase(dbPath: String = ":memory:") {
 			}
 
 			if (false) {
-				rawModule.xSavepoint = staticCFunction { pVTab, n ->
-					val virtualTable = pVTab!!.reinterpret<ksqlite_vtab>().pointed.userObj!!.asStableRef<SQLiteVirtualTable>().get()
-					virtualTable.savePoint(n)
-					SQLITE_OK
-				}
-				rawModule.xRelease = staticCFunction { pVTab, n ->
-					val virtualTable = pVTab!!.reinterpret<ksqlite_vtab>().pointed.userObj!!.asStableRef<SQLiteVirtualTable>().get()
-					virtualTable.release(n)
-					SQLITE_OK
-				}
-				rawModule.xRollbackTo = staticCFunction { pVTab, n ->
-					val virtualTable = pVTab!!.reinterpret<ksqlite_vtab>().pointed.userObj!!.asStableRef<SQLiteVirtualTable>().get()
-					virtualTable.rollbackTo(n)
-					SQLITE_OK
-				}
+				// rawModule.xSavepoint = staticCFunction { pVTab, n ->
+				// 	val virtualTable = pVTab!!.reinterpret<ksqlite_vtab>().pointed.userObj!!.asStableRef<SQLiteVirtualTable>().get()
+				// 	virtualTable.savePoint(n)
+				// 	SQLITE_OK
+				// }
+				// rawModule.xRelease = staticCFunction { pVTab, n ->
+				// 	val virtualTable = pVTab!!.reinterpret<ksqlite_vtab>().pointed.userObj!!.asStableRef<SQLiteVirtualTable>().get()
+				// 	virtualTable.release(n)
+				// 	SQLITE_OK
+				// }
+				// rawModule.xRollbackTo = staticCFunction { pVTab, n ->
+				// 	val virtualTable = pVTab!!.reinterpret<ksqlite_vtab>().pointed.userObj!!.asStableRef<SQLiteVirtualTable>().get()
+				// 	virtualTable.rollbackTo(n)
+				// 	SQLITE_OK
+				// }
 			}
 
 			sqlite3_create_module_v2(

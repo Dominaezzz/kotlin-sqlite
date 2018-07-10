@@ -84,15 +84,6 @@ fun `Custom Aggregate Function`() {
     }
 }
 
-// @Test
-// fun `Custom Table Valued Function`() {
-//     class StringSplitter : SQLiteModule {
-//         class SplitResult : SQLiteVirtualTable {
-
-//         }
-//     }
-// }
-
 fun initdb(db: SQLiteDatabase) {
     db.execute("DROP TABLE IF EXISTS LOL;")
     db.execute("CREATE TABLE LOL(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, age INTEGER NOT NULL);")
@@ -167,6 +158,5 @@ fun main(args: Array<String>) {
         // testStatementBinding(db)
         // testExecuteResult(db)
         // testStatementQuery(db)
-        testCustomFunction(db)
     }
 }
