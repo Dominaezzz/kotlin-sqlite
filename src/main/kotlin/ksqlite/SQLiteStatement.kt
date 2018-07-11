@@ -3,7 +3,7 @@ package ksqlite
 import kotlinx.cinterop.*
 import sqlite3.*
 
-class SQLiteStatement(private val db: SQLiteDatabase, sql: String) {
+class SQLiteStatement internal constructor(val db: SQLiteDatabase, sql: String, tail: CValuesRef<CPointerVar<ByteVar>>?) {
 	var stmt: CPointer<sqlite3_stmt>? = null
 	val sql: String
 		get() = sqlite3_sql(stmt)!!.toKString()
@@ -30,8 +30,7 @@ class SQLiteStatement(private val db: SQLiteDatabase, sql: String) {
 	init {
 		stmt = memScoped {
 			val stmtPtr = alloc<CPointerVar<sqlite3_stmt>>()
-			// Do something about the left over sql statement(s).
-			val result = sqlite3_prepare_v3(db.db, sql, sql.length, 0, stmtPtr.ptr, null)
+			val result = sqlite3_prepare_v3(db.db, sql, sql.length, 0, stmtPtr.ptr, tail)
 			if (result != SQLITE_OK) {
 				throw SQLiteError("Cannot prepare stmt: ${sqlite3_errstr(result)?.toKString()}")
 			}
@@ -165,10 +164,10 @@ class SQLiteStatement(private val db: SQLiteDatabase, sql: String) {
 	}
 }
 
-inline fun SQLiteDatabase.withStmt(sql: String, function: (SQLiteStatement) -> Unit) {
-	val stmt = SQLiteStatement(this, sql)
+inline fun <T> SQLiteDatabase.withStmt(sql: String, function: (SQLiteStatement) -> T) : T {
+	val (stmt, _) = prepare(sql)
 	try {
-		function(stmt)
+		return function(stmt)
 	} finally {
 		stmt.close()
 	}

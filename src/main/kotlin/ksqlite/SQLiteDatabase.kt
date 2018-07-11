@@ -9,12 +9,13 @@ private fun fromCArray(ptr: CPointer<CPointerVar<ByteVar>>, count: Int) =
 		Array(count, { index -> (ptr+index)!!.pointed.value!!.toKString() })
 
 class SQLiteDatabase(dbPath: String = ":memory:") {
-	var dbPath: String = ""
 	var db: CPointer<sqlite3>? = null
-	val version: String
-		get() = sqlite3_version.toKString()
-	val errorMessage: String?
-		get() = sqlite3_errmsg(db)?.toKString()
+	val fileName: String? get() = sqlite3_db_filename(db, "main")?.toKString()
+	val version: String get() = sqlite3_version.toKString()
+	val errorMessage: String? get() = sqlite3_errmsg(db)?.toKString()
+	val lastInsertRowId: Long get() = sqlite3_last_insert_rowid(db)
+	val changes: Int get() = sqlite3_changes(db);
+	val totalChanges: Int get() = sqlite3_total_changes(db);
 
 	init {
 		db = memScoped {
@@ -50,6 +51,11 @@ class SQLiteDatabase(dbPath: String = ":memory:") {
 				sqlite3_free(error.value)
 			}
 		}
+	}
+
+	fun prepare(sql: String) : Pair<SQLiteStatement, String?> = memScoped {
+		val tailPtr = alloc<CPointerVar<ByteVar>>()
+		SQLiteStatement(this@SQLiteDatabase, sql, tailPtr.ptr) to tailPtr.value?.toKString()
 	}
 
 	fun createFunction(name: String, nArg: Int, function: (SQLiteValues, SQLiteContext) -> Unit) {
@@ -279,7 +285,7 @@ class SQLiteDatabase(dbPath: String = ":memory:") {
 		}
 	}
 
-	override fun toString(): String = "SQLiteDatabase database in $dbPath"
+	override fun toString(): String = "SQLiteDatabase database in $fileName"
 
 	fun close() {
 		if (db != null) {
@@ -297,3 +303,29 @@ inline fun withSqlite(path: String, function: (SQLiteDatabase) -> Unit) {
 		db.close()
 	}
 }
+
+
+var SQLiteDatabase.busyTimeout: Long
+	get() = withStmt("PRAGMA busy_timeout;") { it.getColumnLong(0) }
+	set(value) { sqlite3_busy_timeout(db, value.toInt()) }
+
+/**
+ * The user-version is an integer that is available to applications to use however they want.
+ * SQLite makes no use of the user-version itself.
+ *
+ * It is usually used to keep track of migrations.
+ * It's initial value is 0.
+ */
+var SQLiteDatabase.userVersion: Long
+	get() = withStmt("PRAGMA user_version;") { it.getColumnLong(0) }
+	set(value) { execute("PRAGMA user_version = $value") }
+
+/**
+ * Query, set, or clear the enforcement of foreign key constraints.
+ * 
+ * This pragma is a no-op within a transaction;
+ * foreign key constraint enforcement may only be enabled or disabled when there is no pending BEGIN or SAVEPOINT.
+ */
+var SQLiteDatabase.foreignKeysEnabled: Boolean
+	get() = withStmt("PRAGMA foreign_keys;") { it.getColumnInt(0) != 0 }
+	set(value) { execute("PRAGMA foreign_keys = $value;") }
