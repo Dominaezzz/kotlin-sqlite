@@ -64,9 +64,7 @@ Will have to look at the unit tests for more examples.
 
 ## Notes
 
-* Only tested on WSL but should work on linux and mac.
-
-* Not sure how to deal with Windows at the moment. In terms of static/dynamic library.
+* Only tested on WSL and Windows but should work on Linux and Mac.
 
 * The bindings are not final, nicely wrapping SQLite's C API is a WIP.
 

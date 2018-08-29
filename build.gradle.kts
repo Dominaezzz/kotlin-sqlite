@@ -1,0 +1,35 @@
+plugins {
+	id("org.jetbrains.kotlin.konan").version("0.8.2")
+}
+
+konanArtifacts {
+	interop("sqlite3") {
+		target("macos") {
+			compilerOpts("-I/usr/local/include")
+		}
+		target("mingw") {
+			compilerOpts("-IC:/msys64/mingw64/include")
+		}
+	}
+
+	library("ksqlite") {
+		srcDir ("src/main/kotlin")
+		libraries {
+			artifact("sqlite3")
+		}
+	}
+
+	program("test") {
+		srcDir("src/test/kotlin")
+		target("macos") {
+			linkerOpts("-L$/usr/local/lib")
+		}
+		target("mingw") {
+			linkerOpts("-LC:/msys64/mingw64/lib")
+		}
+		libraries {
+			artifact("ksqlite")
+		}
+		extraOpts("-tr")
+	}
+}
