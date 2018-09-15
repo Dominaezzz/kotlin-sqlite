@@ -5,49 +5,39 @@ import sqlite3.*
 
 class SQLiteError(message: String) : Error(message)
 
-private fun fromCArray(ptr: CPointer<CPointerVar<ByteVar>>, count: Int) =
-		Array(count, { index -> (ptr+index)!!.pointed.value!!.toKString() })
-
-class SQLiteDatabase(dbPath: String = ":memory:") {
-	var db: CPointer<sqlite3>? = null
-	val fileName: String? get() = sqlite3_db_filename(db, "main")?.toKString()
+class SQLiteDatabase(val dbPtr: CPointer<sqlite3>) {
+	val fileName: String? get() = sqlite3_db_filename(dbPtr, "main")?.toKString()
 	val version: String get() = sqlite3_version.toKString()
-	val errorMessage: String? get() = sqlite3_errmsg(db)?.toKString()
-	val lastInsertRowId: Long get() = sqlite3_last_insert_rowid(db)
-	val changes: Int get() = sqlite3_changes(db);
-	val totalChanges: Int get() = sqlite3_total_changes(db);
-
-	init {
-		db = memScoped {
-			val dbPtr = alloc<CPointerVar<sqlite3>>()
-			if (sqlite3_open_v2(dbPath, dbPtr.ptr, SQLITE_OPEN_READWRITE or SQLITE_OPEN_CREATE, null) != 0) {
-				throw SQLiteError("Cannot open db: ${errorMessage}")
-			}
-			dbPtr.value
-		}
-	}
+	val errorMessage: String? get() = sqlite3_errmsg(dbPtr)?.toKString()
+	val lastInsertRowId: Long get() = sqlite3_last_insert_rowid(dbPtr)
+	val changes: Int get() = sqlite3_changes(dbPtr)
+	val totalChanges: Int get() = sqlite3_total_changes(dbPtr)
 
 	fun execute(command: String, callback: ((Array<String>, Array<String>)-> Int)? = null) {
 		memScoped {
 			val error = alloc<CPointerVar<ByteVar>>()
-			val callbackStable = callback?.let { StableRef.create(it) }
 			try {
-				val result = sqlite3_exec(
-					db, command,
-					if (callback != null) {
-						staticCFunction { ptr, count, data, columns ->
-							val callbackFunction = ptr!!.asStableRef<(Array<String>, Array<String>) -> Int>().get()
-							val columnsArray = fromCArray(columns!!, count)
-							val dataArray = fromCArray(data!!, count)
-							callbackFunction(columnsArray, dataArray)
-						}
-					} else null,
-					callbackStable?.asCPointer(), error.ptr
-				)
-				
+				val result = if (callback == null) {
+					sqlite3_exec(dbPtr, command, null, null, error.ptr)
+				} else {
+					val callbackStable = StableRef.create(callback)
+					try {
+						sqlite3_exec(
+								dbPtr, command,
+								staticCFunction { ptr, count, data, columns ->
+									val callbackFunction = ptr!!.asStableRef<(Array<String>, Array<String>) -> Int>().get()
+									val columnsArray = Array(count) { columns!![it]!!.toKString() }
+									val dataArray = Array(count) { data!![it]!!.toKString() }
+									callbackFunction(columnsArray, dataArray)
+								},
+								callbackStable.asCPointer(), error.ptr
+						)
+					} finally {
+						callbackStable.dispose()
+					}
+				}
 				if (result != 0) throw SQLiteError("DB error: ${error.value!!.toKString()}")
 			} finally {
-				callbackStable?.dispose()
 				sqlite3_free(error.value)
 			}
 		}
@@ -55,12 +45,17 @@ class SQLiteDatabase(dbPath: String = ":memory:") {
 
 	fun prepare(sql: String) : Pair<SQLiteStatement, String?> = memScoped {
 		val tailPtr = alloc<CPointerVar<ByteVar>>()
-		SQLiteStatement(this@SQLiteDatabase, sql, tailPtr.ptr) to tailPtr.value?.toKString()
+		val stmtPtr = alloc<CPointerVar<sqlite3_stmt>>()
+		val result = sqlite3_prepare_v3(dbPtr, sql, sql.length, 0, stmtPtr.ptr, tailPtr.ptr)
+		if (result != SQLITE_OK) {
+			throw SQLiteError("Cannot prepare statement: ${sqlite3_errstr(result)?.toKString()}")
+		}
+		SQLiteStatement(stmtPtr.value!!) to tailPtr.value?.toKString()
 	}
 
 	fun createFunction(name: String, nArg: Int, function: (SQLiteValues, SQLiteContext) -> Unit) {
 		val result = sqlite3_create_function_v2(
-			db, name, nArg, SQLITE_UTF8, StableRef.create(function).asCPointer(),
+			dbPtr, name, nArg, SQLITE_UTF8, StableRef.create(function).asCPointer(),
 			staticCFunction { ctx, nValues, values ->
 				val func = sqlite3_user_data(ctx)!!.asStableRef<(SQLiteValues, SQLiteContext) -> Unit>().get()
 				func(SQLiteValues(values!!, nValues), SQLiteContext(ctx!!))
@@ -74,7 +69,7 @@ class SQLiteDatabase(dbPath: String = ":memory:") {
 
 	fun createFunction(function: SQLiteScalarFunction) {
 		val result = sqlite3_create_function_v2(
-			db, function.name, function.argumentCount, SQLITE_UTF8, StableRef.create(function).asCPointer(),
+			dbPtr, function.name, function.argumentCount, SQLITE_UTF8, StableRef.create(function).asCPointer(),
 			staticCFunction { ctx, nValues, values ->
 				val func = sqlite3_user_data(ctx)!!.asStableRef<SQLiteScalarFunction>().get()
 				func.function(SQLiteValues(values!!, nValues), SQLiteContext(ctx!!))
@@ -88,7 +83,7 @@ class SQLiteDatabase(dbPath: String = ":memory:") {
 
 	fun createFunction(function: SQLiteAggregateFunction) {
 		val result = sqlite3_create_function_v2(
-			db, function.name, function.argumentCount, SQLITE_UTF8, StableRef.create(function).asCPointer(),
+			dbPtr, function.name, function.argumentCount, SQLITE_UTF8, StableRef.create(function).asCPointer(),
 			null,
 			staticCFunction { ctx, nValues, values ->
 				val func = sqlite3_user_data(ctx)!!.asStableRef<SQLiteAggregateFunction>().get()
@@ -109,41 +104,69 @@ class SQLiteDatabase(dbPath: String = ":memory:") {
 	fun createModule(name: String, module: SQLiteModule) {
 		val result = memScoped {
 			val rawModule = alloc<sqlite3_module>()
-			if (false) { // If not eponymous.
+			if (module is SQLiteModulePersist) { // If not eponymous.
 				rawModule.xCreate = staticCFunction { dbPtr, pAux, argc, argv, ppVTab, pzErr ->
-					val args = fromCArray(argv!!, argc)
-					// Call module's create.
+					val moduleObj = pAux!!.asStableRef<SQLiteModulePersist>().get()
+					val vTabObj: SQLiteVirtualTable
+					try {
+						vTabObj = moduleObj.create(SQLiteDatabase(dbPtr!!), Array(argc) { argv!![it]!!.toKString() })
+						sqlite3_declare_vtab(dbPtr, vTabObj.declaration)
+					} catch (t: Throwable) {
+						pzErr!!.pointed.value = t.message?.let { sqlite3_mprintf(it) }
+						return@staticCFunction SQLITE_ERROR
+					}
+
+					ppVTab!!.pointed.value = nativeHeap.alloc<ksqlite_vtab>().run {
+						userObj = StableRef.create(vTabObj).asCPointer()
+						reinterpret<sqlite3_vtab>().ptr
+					}
 					SQLITE_OK
 				}
 
 				// This is required though....
 				rawModule.xDestroy = staticCFunction { pVTab ->
-					SQLITE_OK
+					val ref = pVTab!!.reinterpret<ksqlite_vtab>().pointed.userObj!!.asStableRef<SQLiteVirtualTable>()
+					nativeHeap.free(pVTab)
+					val vTabObj = ref.get()
+					ref.dispose()
+
+					try {
+						vTabObj.destroy()
+						SQLITE_OK
+					} catch (t: Throwable) {
+						SQLITE_ERROR
+					}
 				}
 			}
 			rawModule.xConnect = staticCFunction { dbPtr, pAux, argc, argv, ppVTab, pzErr ->
-				val args = fromCArray(argv!!, argc)
-				
 				val moduleObj = pAux!!.asStableRef<SQLiteModule>().get()
-				val vTabObj = moduleObj.connect(SQLiteDatabase(), args)
-
-				ppVTab!!.pointed.value = nativeHeap.alloc<ksqlite_vtab>().apply {
-					userObj = StableRef.create(vTabObj).asCPointer()
+				val vTabObj: SQLiteVirtualTable
+				try {
+					vTabObj = moduleObj.connect(SQLiteDatabase(dbPtr!!), Array(argc) { argv!![it]!!.toKString() })
+					sqlite3_declare_vtab(dbPtr, vTabObj.declaration)
+				} catch (t: Throwable) {
+					pzErr!!.pointed.value = t.message?.let { sqlite3_mprintf(it) }
+					return@staticCFunction SQLITE_ERROR
 				}
-				.reinterpret<sqlite3_vtab>().ptr
 
-				sqlite3_declare_vtab(dbPtr, vTabObj.declaration)
-
+				ppVTab!!.pointed.value = nativeHeap.alloc<ksqlite_vtab>().run {
+					userObj = StableRef.create(vTabObj).asCPointer()
+					reinterpret<sqlite3_vtab>().ptr
+				}
 				SQLITE_OK
 			}
 			rawModule.xDisconnect = staticCFunction { pVTab ->
-				pVTab!!.reinterpret<ksqlite_vtab>().pointed.userObj!!.asStableRef<SQLiteVirtualTable>().apply {
-					get().disconnect()
-					dispose()
-				}
+				val ref = pVTab!!.reinterpret<ksqlite_vtab>().pointed.userObj!!.asStableRef<SQLiteVirtualTable>()
 				nativeHeap.free(pVTab)
+				val vTab = ref.get()
+				ref.dispose()
 
-				SQLITE_OK
+				try {
+					vTab.disconnect()
+					SQLITE_OK
+				} catch (t: Throwable) {
+					SQLITE_ERROR
+				}
 			}
 
 			rawModule.xBestIndex = staticCFunction { pVTab, pIndexInfo ->
@@ -152,15 +175,15 @@ class SQLiteDatabase(dbPath: String = ":memory:") {
 				val indexInfo = pIndexInfo!!.pointed
 
 				val bestIndexInfo = virtualTable.bestIndex(
-					Array(indexInfo.nConstraint, { index -> SQLiteIndexConstraint(indexInfo.aConstraint!![index].ptr) }),
-					Array(indexInfo.nOrderBy, { index -> SQLiteIndexOrderBy(indexInfo.aOrderBy!![index].ptr) }),
-					Array(indexInfo.nConstraint, { index -> SQLiteIndexConstraintUsage(indexInfo.aConstraintUsage!![index].ptr) })
+					Array(indexInfo.nConstraint) { SQLiteIndexConstraint(indexInfo.aConstraint!![it].ptr) },
+					Array(indexInfo.nOrderBy) { SQLiteIndexOrderBy(indexInfo.aOrderBy!![it].ptr) },
+					Array(indexInfo.nConstraint) { SQLiteIndexConstraintUsage(indexInfo.aConstraintUsage!![it].ptr) }
 				)
 
 				indexInfo.idxNum = bestIndexInfo.idxNum
 				if (bestIndexInfo.idxStr != null) {
 					indexInfo.idxStr = sqlite3_mprintf(bestIndexInfo.idxStr)
-					indexInfo.needToFreeIdxStr = 1;
+					indexInfo.needToFreeIdxStr = 1
 				}
 
 				indexInfo.orderByConsumed = if (bestIndexInfo.orderByConsumed) 1 else 0
@@ -174,21 +197,32 @@ class SQLiteDatabase(dbPath: String = ":memory:") {
 
 			rawModule.xOpen = staticCFunction { pVTab, ppCursor ->
 				val virtualTable = pVTab!!.reinterpret<ksqlite_vtab>().pointed.userObj!!.asStableRef<SQLiteVirtualTable>().get()
+				val virtualTableCursor: SQLiteVirtualTableCursor
+				try {
+					virtualTableCursor = virtualTable.open()
+				} catch (t: Throwable) {
+					return@staticCFunction SQLITE_ERROR
+				}
 
 				ppCursor!!.pointed.value = nativeHeap.alloc<ksqlite_vtab_cursor>().apply {
-					userObj = StableRef.create(virtualTable.open()).asCPointer()
+					userObj = StableRef.create(virtualTableCursor).asCPointer()
 				}
 				.reinterpret<sqlite3_vtab_cursor>().ptr
 
 				SQLITE_OK
 			}
 			rawModule.xClose = staticCFunction { pCursor ->
-				pCursor!!.reinterpret<ksqlite_vtab_cursor>().pointed.userObj!!.asStableRef<SQLiteVirtualTableCursor>().apply {
-					get().close()
-					dispose()
-				}
+				val ref = pCursor!!.reinterpret<ksqlite_vtab_cursor>().pointed.userObj!!.asStableRef<SQLiteVirtualTableCursor>()
 				nativeHeap.free(pCursor)
-				SQLITE_OK
+				val virtualTableCursor = ref.get()
+				ref.dispose()
+
+				try {
+					virtualTableCursor.close()
+					SQLITE_OK
+				} catch (t: Throwable) {
+					SQLITE_ERROR
+				}
 			}
 
 			rawModule.xEof = staticCFunction { pCursor ->
@@ -204,23 +238,35 @@ class SQLiteDatabase(dbPath: String = ":memory:") {
 			}
 
 			rawModule.xNext = staticCFunction { pCursor ->
-				pCursor!!.reinterpret<ksqlite_vtab_cursor>().pointed
-					.userObj!!.asStableRef<SQLiteVirtualTableCursor>().get()
-					.next()
-				SQLITE_OK
+				try {
+					pCursor!!.reinterpret<ksqlite_vtab_cursor>().pointed
+							.userObj!!.asStableRef<SQLiteVirtualTableCursor>().get()
+							.next()
+					SQLITE_OK
+				} catch (t: Throwable) {
+					SQLITE_ERROR
+				}
 			}
 
 			rawModule.xColumn = staticCFunction { pCursor, context, n ->
-				pCursor!!.reinterpret<ksqlite_vtab_cursor>().pointed
-					.userObj!!.asStableRef<SQLiteVirtualTableCursor>().get()
-					.column(SQLiteContext(context!!), n)
-				SQLITE_OK
+				try {
+					pCursor!!.reinterpret<ksqlite_vtab_cursor>().pointed
+							.userObj!!.asStableRef<SQLiteVirtualTableCursor>().get()
+							.column(SQLiteContext(context!!), n)
+					SQLITE_OK
+				} catch (t: Throwable) {
+					SQLITE_ERROR
+				}
 			}
 
 			rawModule.xRowid = staticCFunction { pCursor, pRowid ->
-				pRowid!!.pointed.value = pCursor!!.reinterpret<ksqlite_vtab_cursor>().pointed
-					.userObj!!.asStableRef<SQLiteVirtualTableCursor>().get().rowId
-				SQLITE_OK
+				try {
+					pRowid!!.pointed.value = pCursor!!.reinterpret<ksqlite_vtab_cursor>().pointed
+							.userObj!!.asStableRef<SQLiteVirtualTableCursor>().get().rowId
+					SQLITE_OK
+				} catch (t: Throwable) {
+					SQLITE_ERROR
+				}
 			}
 
 			if (false) {
@@ -255,8 +301,12 @@ class SQLiteDatabase(dbPath: String = ":memory:") {
 			
 			rawModule.xRename = staticCFunction { pVTab, pName ->
 				val virtualTable = pVTab!!.reinterpret<ksqlite_vtab>().pointed.userObj!!.asStableRef<SQLiteVirtualTable>().get()
-				virtualTable.rename(pName!!.toKString())
-				SQLITE_OK
+				try {
+					virtualTable.rename(pName!!.toKString())
+					SQLITE_OK
+				} catch (t: Throwable) {
+					SQLITE_ERROR
+				}
 			}
 
 			if (false) {
@@ -278,25 +328,34 @@ class SQLiteDatabase(dbPath: String = ":memory:") {
 			}
 
 			sqlite3_create_module_v2(
-				db, name, rawModule.ptr, StableRef.create(module).asCPointer(), staticCFunction { ptr ->
-					ptr!!.asStableRef<SQLiteModule>().dispose()
-				}
+					dbPtr, name, rawModule.ptr, StableRef.create(module).asCPointer(),
+					staticCFunction { ptr -> ptr!!.asStableRef<SQLiteModule>().dispose() }
 			)
 		}
+		check(result == SQLITE_OK) { "Failed to create module." }
 	}
 
 	override fun toString(): String = "SQLiteDatabase database in $fileName"
 
 	fun close() {
-		if (db != null) {
-			sqlite3_close_v2(db)
-			db = null
+		sqlite3_close_v2(dbPtr)
+	}
+
+	companion object {
+		fun open(path: String = ":memory:") : SQLiteDatabase {
+			return memScoped {
+				val dbPtr = alloc<CPointerVar<sqlite3>>()
+				if (sqlite3_open_v2(path, dbPtr.ptr, SQLITE_OPEN_READWRITE or SQLITE_OPEN_CREATE, null) != 0) {
+					throw SQLiteError("Cannot open dbPtr: ${sqlite3_errmsg(dbPtr.value)?.toKString()}")
+				}
+				SQLiteDatabase(dbPtr.value!!)
+			}
 		}
 	}
 }
 
 inline fun withSqlite(path: String, function: (SQLiteDatabase) -> Unit) {
-	val db = SQLiteDatabase(path)
+	val db = SQLiteDatabase.open(path)
 	try {
 		function(db)
 	} finally {
@@ -307,7 +366,7 @@ inline fun withSqlite(path: String, function: (SQLiteDatabase) -> Unit) {
 
 var SQLiteDatabase.busyTimeout: Long
 	get() = withStmt("PRAGMA busy_timeout;") { it.getColumnLong(0) }
-	set(value) { sqlite3_busy_timeout(db, value.toInt()) }
+	set(value) { sqlite3_busy_timeout(dbPtr, value.toInt()) }
 
 /**
  * The user-version is an integer that is available to applications to use however they want.

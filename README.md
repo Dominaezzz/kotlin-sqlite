@@ -10,7 +10,7 @@ This library allows for 'kotlinified' use of SQLite and is based on the kotlinco
 ## Examples
 
 ```Kotlin
-withSqlite("temp.db") { db ->
+withSqlite("dbPtr") { db ->
     println("SQLite Version: ${db.version}")
 
     db.execute("""

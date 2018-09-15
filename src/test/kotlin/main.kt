@@ -15,7 +15,7 @@ fun `But... does it work?`() {
 fun `Store and load BLOB`() {
     withSqlite("temp.db") { db ->
         db.withStmt("SELECT ?;") { stmt ->
-            val expected = arrayOf<Byte>(1, 2, 3, 0, 6, 5, 4)
+            val expected = byteArrayOf(1, 2, 3, 0, 6, 5, 4)
 
             stmt.bind(1, expected)
             stmt.step()
@@ -124,19 +124,15 @@ fun testStatementBinding(db: SQLiteDatabase) {
         println(stmt.sql)
 
         stmt.bind(1, "Dominic")
-
         println(stmt.expandedSql)
 
         stmt.bind(2, 19)
-        
         println(stmt.expandedSql)
 
         stmt.bind(1, "Fischer")
-
         println(stmt.expandedSql)
 
         stmt.bind(2, 40540)
-
         println(stmt.expandedSql)
     }
 }
@@ -155,8 +151,8 @@ fun main(args: Array<String>) {
 
         initdb(db)
         
-        // testStatementBinding(db)
-        // testExecuteResult(db)
-        // testStatementQuery(db)
+        // testStatementBinding(dbPtr)
+        // testExecuteResult(dbPtr)
+        // testStatementQuery(dbPtr)
     }
 }

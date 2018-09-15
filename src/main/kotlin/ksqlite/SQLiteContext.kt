@@ -3,41 +3,54 @@ package ksqlite
 import kotlinx.cinterop.*
 import sqlite3.*
 
-class SQLiteContext internal constructor(internal var context: CPointer<sqlite3_context>) {
+class SQLiteContext(internal val ptr: CPointer<sqlite3_context>) {
 
 	fun setResult(value: String) {
-		sqlite3_result_text(context, value, value.length, null)
+		sqlite3_result_text(ptr, value, value.length, (-1).toLong().toCPointer())
 	}
 
-	fun setResult(value: Array<Byte>) {
-        val blob = sqlite3_malloc(value.size)!!.reinterpret<ByteVar>()
-        for (i in value.indices) { blob[i] = value[i] }
-	    sqlite3_result_blob(context, blob, value.size, staticCFunction { b -> sqlite3_free(b) })
+	fun setResult(value: ByteArray) {
+	    sqlite3_result_blob(ptr, value.refTo(0), value.size, (-1).toLong().toCPointer())
 	}
 
 	fun setResult(value: Double) {
-		sqlite3_result_double(context, value)
+		sqlite3_result_double(ptr, value)
 	}
 
 	fun setResult(value: Int) {
-		sqlite3_result_int(context, value)
+		sqlite3_result_int(ptr, value)
 	}
 
 	fun setResult(value: Long) {
-		sqlite3_result_int64(context, value)
+		sqlite3_result_int64(ptr, value)
 	}
 
 	fun setResultToNull() {
-		sqlite3_result_null(context)
+		sqlite3_result_null(ptr)
 	}
 
 	fun setResultToZeroBlob(count: Int) {
-		sqlite3_result_zeroblob(context, count)
+		sqlite3_result_zeroblob(ptr, count)
 	}
 
 	fun setResultToError(errorMessage: String) {
-		sqlite3_result_error(context, errorMessage, errorMessage.length)
+		sqlite3_result_error(ptr, errorMessage, errorMessage.length)
 	}
 
-	// TODO Implement subType, setResultToPointer and maybe value.
+	fun setResultToSubType(subType: Int) {
+		sqlite3_result_subtype(ptr, subType)
+	}
+
+	fun setResultToPointer(obj: Any) {
+		sqlite3_result_pointer(
+				ptr,
+				StableRef.create(obj).asCPointer(),
+				null,
+				staticCFunction { it -> it!!.asStableRef<Any>().dispose()  }
+		)
+	}
+
+//	fun setResultToValue(value: SQLiteValues) {
+//
+//	}
 }

@@ -4,7 +4,7 @@ import kotlinx.cinterop.*
 import sqlite3.*
 
 class SQLiteValues internal constructor(private var values: CPointer<CPointerVar<sqlite3_value>>, var count: Int) {
-	private fun checkValueIndex(valueIndex: Int): Unit {
+	private fun checkValueIndex(valueIndex: Int) {
 		check(valueIndex in 0 until count) { "Value index out of bounds." }
 	}
 
@@ -32,17 +32,16 @@ class SQLiteValues internal constructor(private var values: CPointer<CPointerVar
 		return sqlite3_value_double(values[valueIndex])
 	}
 
-	fun getAsBlob(valueIndex: Int) : Array<Byte>? {
+	fun getAsBlob(valueIndex: Int) : ByteArray? {
 		checkValueIndex(valueIndex)
 
 		val blob = sqlite3_value_blob(values[valueIndex])
 		val length = sqlite3_value_bytes(values[valueIndex])
 
 		if (blob != null) {
-			val bytes = blob.reinterpret<ByteVar>()
-			return Array<Byte>(length, { index -> bytes[index] })
+			return blob.readBytes(length)
 		} else if (sqlite3_value_type(values[valueIndex]) == SQLITE_NULL) {
-			return arrayOf<Byte>()
+			return byteArrayOf()
 		}
 		return null
 	}
