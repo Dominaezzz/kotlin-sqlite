@@ -4,8 +4,11 @@ plugins {
 
 konanArtifacts {
 	interop("sqlite3") {
+		target("linux") {
+			compilerOpts("-I/usr/include")
+		}
 		target("macos") {
-			compilerOpts("-I/usr/local/include")
+			compilerOpts("-I/usr/local/include -I/opt/local/include")
 		}
 		target("mingw") {
 			compilerOpts("-IC:/msys64/mingw64/include")
@@ -21,6 +24,9 @@ konanArtifacts {
 
 	program("test") {
 		srcDir("src/test/kotlin")
+		target("linux") {
+			linkerOpts("-L/usr/lib -L/usr/lib/x86_64-linux-gnu")
+		}
 		target("macos") {
 			linkerOpts("-L$/usr/local/lib")
 		}
