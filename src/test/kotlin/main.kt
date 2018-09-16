@@ -30,7 +30,7 @@ fun `Store and load BLOB`() {
 @Test
 fun `Custom Scalar Function`() {
 	val lol = object : SQLiteScalarFunction("LOL", 0) {
-		override fun function(values: SQLiteValues, context: SQLiteContext) {
+		override operator fun invoke(values: SQLiteValues, context: SQLiteContext) {
 			context.setResult("The Custom Function works!!")
 		}
 	}
@@ -56,7 +56,7 @@ fun `Custom Aggregate Function`() {
 	val lol = object : SQLiteAggregateFunction("LOL", 1) {
 		override fun step(values: SQLiteValues, context: SQLiteContext) {
 			val aggregateContext = context.getAggregateContext { LOLContext(1) }
-			aggregateContext.product *= values.getAsInt(0)
+			aggregateContext.product *= values[0].asInt()
 		}
 
 		override fun final(context: SQLiteContext) {

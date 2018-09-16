@@ -3,50 +3,40 @@ package ksqlite
 import kotlinx.cinterop.*
 import sqlite3.*
 
-class SQLiteError(message: String) : Error(message)
-
-class SQLiteDatabase(val dbPtr: CPointer<sqlite3>) {
-	val fileName: String? get() = sqlite3_db_filename(dbPtr, "main")?.toKString()
+class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
+	val fileName: String? get() = sqlite3_db_filename(ptr, "main")?.toKString()
 	val version: String get() = sqlite3_version.toKString()
-	val errorMessage: String? get() = sqlite3_errmsg(dbPtr)?.toKString()
-	val lastInsertRowId: Long get() = sqlite3_last_insert_rowid(dbPtr)
-	val changes: Int get() = sqlite3_changes(dbPtr)
-	val totalChanges: Int get() = sqlite3_total_changes(dbPtr)
+	val errorMessage: String? get() = sqlite3_errmsg(ptr)?.toKString()
+	val lastInsertRowId: Long get() = sqlite3_last_insert_rowid(ptr)
+	val changes: Int get() = sqlite3_changes(ptr)
+	val totalChanges: Int get() = sqlite3_total_changes(ptr)
 
 	fun execute(command: String, callback: ((Array<String>, Array<String>)-> Int)? = null) {
 		memScoped {
 			val error = alloc<CPointerVar<ByteVar>>()
-			try {
-				val result = if (callback == null) {
-					sqlite3_exec(dbPtr, command, null, null, error.ptr)
-				} else {
-					val callbackStable = StableRef.create(callback)
-					try {
-						sqlite3_exec(
-								dbPtr, command,
-								staticCFunction { ptr, count, data, columns ->
-									val callbackFunction = ptr!!.asStableRef<(Array<String>, Array<String>) -> Int>().get()
-									val columnsArray = Array(count) { columns!![it]!!.toKString() }
-									val dataArray = Array(count) { data!![it]!!.toKString() }
-									callbackFunction(columnsArray, dataArray)
-								},
-								callbackStable.asCPointer(), error.ptr
-						)
-					} finally {
-						callbackStable.dispose()
-					}
-				}
-				if (result != 0) throw SQLiteError("DB error: ${error.value!!.toKString()}")
-			} finally {
-				sqlite3_free(error.value)
+			val result = if (callback == null) {
+				sqlite3_exec(ptr, command, null, null, error.ptr)
+			} else {
+				val callbackStable = StableRef.create(callback)
+				defer { callbackStable.dispose() }
+
+				sqlite3_exec(ptr, command, staticCFunction { ptr, count, data, columns ->
+					val callbackFunction = ptr!!.asStableRef<(Array<String>, Array<String>) -> Int>().get()
+					val columnsArray = Array(count) { columns!![it]!!.toKString() }
+					val dataArray = Array(count) { data!![it]!!.toKString() }
+					callbackFunction(columnsArray, dataArray)
+				}, callbackStable.asCPointer(), error.ptr)
 			}
+			defer { sqlite3_free(error.value) }
+
+			if (result != 0) throw SQLiteError("DB error: ${error.value!!.toKString()}")
 		}
 	}
 
 	fun prepare(sql: String) : Pair<SQLiteStatement, String?> = memScoped {
 		val tailPtr = alloc<CPointerVar<ByteVar>>()
 		val stmtPtr = alloc<CPointerVar<sqlite3_stmt>>()
-		val result = sqlite3_prepare_v3(dbPtr, sql, sql.length, 0, stmtPtr.ptr, tailPtr.ptr)
+		val result = sqlite3_prepare_v3(ptr, sql, sql.length, 0, stmtPtr.ptr, tailPtr.ptr)
 		if (result != SQLITE_OK) {
 			throw SQLiteError("Cannot prepare statement: ${sqlite3_errstr(result)?.toKString()}")
 		}
@@ -55,7 +45,7 @@ class SQLiteDatabase(val dbPtr: CPointer<sqlite3>) {
 
 	fun createFunction(name: String, nArg: Int, function: (SQLiteValues, SQLiteContext) -> Unit) {
 		val result = sqlite3_create_function_v2(
-			dbPtr, name, nArg, SQLITE_UTF8, StableRef.create(function).asCPointer(),
+				ptr, name, nArg, SQLITE_UTF8, StableRef.create(function).asCPointer(),
 			staticCFunction { ctx, nValues, values ->
 				val func = sqlite3_user_data(ctx)!!.asStableRef<(SQLiteValues, SQLiteContext) -> Unit>().get()
 				func(SQLiteValues(values!!, nValues), SQLiteContext(ctx!!))
@@ -69,10 +59,10 @@ class SQLiteDatabase(val dbPtr: CPointer<sqlite3>) {
 
 	fun createFunction(function: SQLiteScalarFunction) {
 		val result = sqlite3_create_function_v2(
-			dbPtr, function.name, function.argumentCount, SQLITE_UTF8, StableRef.create(function).asCPointer(),
+				ptr, function.name, function.argumentCount, SQLITE_UTF8, StableRef.create(function).asCPointer(),
 			staticCFunction { ctx, nValues, values ->
 				val func = sqlite3_user_data(ctx)!!.asStableRef<SQLiteScalarFunction>().get()
-				func.function(SQLiteValues(values!!, nValues), SQLiteContext(ctx!!))
+				func(SQLiteValues(values!!, nValues), SQLiteContext(ctx!!))
 			},
 			null,
 			null,
@@ -83,7 +73,7 @@ class SQLiteDatabase(val dbPtr: CPointer<sqlite3>) {
 
 	fun createFunction(function: SQLiteAggregateFunction) {
 		val result = sqlite3_create_function_v2(
-			dbPtr, function.name, function.argumentCount, SQLITE_UTF8, StableRef.create(function).asCPointer(),
+				ptr, function.name, function.argumentCount, SQLITE_UTF8, StableRef.create(function).asCPointer(),
 			null,
 			staticCFunction { ctx, nValues, values ->
 				val func = sqlite3_user_data(ctx)!!.asStableRef<SQLiteAggregateFunction>().get()
@@ -104,9 +94,9 @@ class SQLiteDatabase(val dbPtr: CPointer<sqlite3>) {
 	fun createModule(name: String, module: SQLiteModule) {
 		val result = memScoped {
 			val rawModule = alloc<sqlite3_module>()
-			if (module is SQLiteModulePersist) { // If not eponymous.
+			if (module is SQLiteModule.Persist) { // If not eponymous.
 				rawModule.xCreate = staticCFunction { dbPtr, pAux, argc, argv, ppVTab, pzErr ->
-					val moduleObj = pAux!!.asStableRef<SQLiteModulePersist>().get()
+					val moduleObj = pAux!!.asStableRef<SQLiteModule.Persist>().get()
 					val vTabObj: SQLiteVirtualTable
 					try {
 						vTabObj = moduleObj.create(SQLiteDatabase(dbPtr!!), Array(argc) { argv!![it]!!.toKString() })
@@ -174,25 +164,17 @@ class SQLiteDatabase(val dbPtr: CPointer<sqlite3>) {
 
 				val indexInfo = pIndexInfo!!.pointed
 
-				val bestIndexInfo = virtualTable.bestIndex(
-					Array(indexInfo.nConstraint) { SQLiteIndexConstraint(indexInfo.aConstraint!![it].ptr) },
-					Array(indexInfo.nOrderBy) { SQLiteIndexOrderBy(indexInfo.aOrderBy!![it].ptr) },
-					Array(indexInfo.nConstraint) { SQLiteIndexConstraintUsage(indexInfo.aConstraintUsage!![it].ptr) }
-				)
-
-				indexInfo.idxNum = bestIndexInfo.idxNum
-				if (bestIndexInfo.idxStr != null) {
-					indexInfo.idxStr = sqlite3_mprintf(bestIndexInfo.idxStr)
-					indexInfo.needToFreeIdxStr = 1
+				try {
+					virtualTable.bestIndex(
+							Array(indexInfo.nConstraint) { SQLiteIndex.Constraint(indexInfo.aConstraint!![it].ptr) },
+							Array(indexInfo.nOrderBy) { SQLiteIndex.OrderBy(indexInfo.aOrderBy!![it].ptr) },
+							Array(indexInfo.nConstraint) { SQLiteIndex.ConstraintUsage(indexInfo.aConstraintUsage!![it].ptr) },
+							SQLiteIndex.Info(pIndexInfo)
+					)
+					SQLITE_OK
+				} catch (t: Throwable) {
+					SQLITE_ERROR
 				}
-
-				indexInfo.orderByConsumed = if (bestIndexInfo.orderByConsumed) 1 else 0
-				indexInfo.estimatedCost = bestIndexInfo.estimatedCost
-				indexInfo.estimatedRows = bestIndexInfo.estimatedRows
-				indexInfo.idxFlags = bestIndexInfo.idxFlags
-				indexInfo.colUsed = bestIndexInfo.columnsUsed
-
-				SQLITE_OK
 			}
 
 			rawModule.xOpen = staticCFunction { pVTab, ppCursor ->
@@ -231,10 +213,15 @@ class SQLiteDatabase(val dbPtr: CPointer<sqlite3>) {
 			}
 
 			rawModule.xFilter = staticCFunction { pCursor, idxNum, idxStr, argc, argv ->
-				pCursor!!.reinterpret<ksqlite_vtab_cursor>().pointed
+				val cursor = pCursor!!.reinterpret<ksqlite_vtab_cursor>().pointed
 					.userObj!!.asStableRef<SQLiteVirtualTableCursor>().get()
-					.filter(idxNum, idxStr?.toKString(), SQLiteValues(argv!!, argc))
-				SQLITE_OK
+
+				try {
+					cursor.filter(idxNum, idxStr?.toKString(), SQLiteValues(argv!!, argc))
+					SQLITE_OK
+				} catch (t: Throwable) {
+					SQLITE_ERROR
+				}
 			}
 
 			rawModule.xNext = staticCFunction { pCursor ->
@@ -328,17 +315,24 @@ class SQLiteDatabase(val dbPtr: CPointer<sqlite3>) {
 			}
 
 			sqlite3_create_module_v2(
-					dbPtr, name, rawModule.ptr, StableRef.create(module).asCPointer(),
+					ptr, name, rawModule.ptr, StableRef.create(module).asCPointer(),
 					staticCFunction { ptr -> ptr!!.asStableRef<SQLiteModule>().dispose() }
 			)
 		}
 		check(result == SQLITE_OK) { "Failed to create module." }
 	}
 
+	fun setUpdateHook(hook: (Int, String, String, Long) -> Unit) {
+		sqlite3_update_hook(ptr, staticCFunction { usrPtr, updateType, dbName, tableName, rowId ->
+			val callback = usrPtr!!.asStableRef<(Int, String, String, Long) -> Unit>().get()
+			callback(updateType, dbName!!.toKString(), tableName!!.toKString(), rowId)
+		}, StableRef.create(hook).asCPointer())
+	}
+
 	override fun toString(): String = "SQLiteDatabase database in $fileName"
 
 	fun close() {
-		sqlite3_close_v2(dbPtr)
+		sqlite3_close_v2(ptr)
 	}
 
 	companion object {
@@ -353,38 +347,3 @@ class SQLiteDatabase(val dbPtr: CPointer<sqlite3>) {
 		}
 	}
 }
-
-inline fun withSqlite(path: String, function: (SQLiteDatabase) -> Unit) {
-	val db = SQLiteDatabase.open(path)
-	try {
-		function(db)
-	} finally {
-		db.close()
-	}
-}
-
-
-var SQLiteDatabase.busyTimeout: Long
-	get() = withStmt("PRAGMA busy_timeout;") { it.getColumnLong(0) }
-	set(value) { sqlite3_busy_timeout(dbPtr, value.toInt()) }
-
-/**
- * The user-version is an integer that is available to applications to use however they want.
- * SQLite makes no use of the user-version itself.
- *
- * It is usually used to keep track of migrations.
- * It's initial value is 0.
- */
-var SQLiteDatabase.userVersion: Long
-	get() = withStmt("PRAGMA user_version;") { it.getColumnLong(0) }
-	set(value) { execute("PRAGMA user_version = $value") }
-
-/**
- * Query, set, or clear the enforcement of foreign key constraints.
- * 
- * This pragma is a no-op within a transaction;
- * foreign key constraint enforcement may only be enabled or disabled when there is no pending BEGIN or SAVEPOINT.
- */
-var SQLiteDatabase.foreignKeysEnabled: Boolean
-	get() = withStmt("PRAGMA foreign_keys;") { it.getColumnInt(0) != 0 }
-	set(value) { execute("PRAGMA foreign_keys = $value;") }

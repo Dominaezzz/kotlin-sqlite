@@ -3,7 +3,8 @@ package ksqlite
 import kotlinx.cinterop.*
 import sqlite3.*
 
-class SQLiteStatement constructor(val ptr: CPointer<sqlite3_stmt>) {
+class SQLiteStatement(val ptr: CPointer<sqlite3_stmt>) {
+	val db: SQLiteDatabase get() = SQLiteDatabase(sqlite3_db_handle(ptr)!!)
 	val sql: String get() = sqlite3_sql(ptr)!!.toKString()
 	val expandedSql: String? get() = sqlite3_expanded_sql(ptr)?.let {
 			try {
@@ -47,9 +48,7 @@ class SQLiteStatement constructor(val ptr: CPointer<sqlite3_stmt>) {
 	}
 
 	fun bind(paramIndex: Int, value: ByteArray) {
-        val blob = sqlite3_malloc(value.size)!!.reinterpret<ByteVar>()
-        for (i in value.indices) { blob[i] = value[i] }
-	    checkBind(sqlite3_bind_blob(ptr, paramIndex, blob, value.size, staticCFunction { ptr -> sqlite3_free(ptr) }))
+	    checkBind(sqlite3_bind_blob(ptr, paramIndex, value.refTo(0), value.size, (-1).toLong().toCPointer()))
 	}
 
 	fun bind(paramIndex: Int, value: Double) {
@@ -62,6 +61,17 @@ class SQLiteStatement constructor(val ptr: CPointer<sqlite3_stmt>) {
 
 	fun bind(paramIndex: Int, value: Long) {
 		checkBind(sqlite3_bind_int64(ptr, paramIndex, value))
+	}
+
+	fun bind(paramIndex: Int, value: SQLiteValue) {
+		checkBind(sqlite3_bind_value(ptr, paramIndex, value.ptr))
+	}
+
+	fun bindPointer(paramIndex: Int, key: String, value: Any) {
+		checkBind(sqlite3_bind_pointer(
+				ptr, paramIndex, StableRef.create(value).asCPointer(), key,
+				staticCFunction { it -> it!!.asStableRef<Any>().dispose() }
+		))
 	}
 
 	fun bindNull(paramIndex: Int) {
@@ -125,26 +135,20 @@ class SQLiteStatement constructor(val ptr: CPointer<sqlite3_stmt>) {
 		checkColumnIndex(columnIndex)
 
 		val blob = sqlite3_column_blob(ptr, columnIndex)
-		val length = sqlite3_column_bytes(ptr, columnIndex)
-
-		if (blob != null) {
-			return blob.readBytes(length)
-		} else if (sqlite3_column_type(ptr, columnIndex) == SQLITE_NULL) {
-			return byteArrayOf()
+		return when {
+			blob != null -> blob.readBytes(sqlite3_column_bytes(ptr, columnIndex))
+			sqlite3_column_type(ptr, columnIndex) == SQLITE_NULL -> byteArrayOf()
+			else -> null
 		}
-		return null
+	}
+
+	fun getColumnValue(columnIndex: Int) : SQLiteValue {
+		checkColumnIndex(columnIndex)
+
+		return SQLiteValue(sqlite3_column_value(ptr, columnIndex)!!)
 	}
 
 	fun close() {
 		sqlite3_finalize(ptr)
-	}
-}
-
-inline fun <T> SQLiteDatabase.withStmt(sql: String, function: (SQLiteStatement) -> T) : T {
-	val (stmt, _) = prepare(sql)
-	try {
-		return function(stmt)
-	} finally {
-		stmt.close()
 	}
 }

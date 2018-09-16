@@ -4,6 +4,7 @@ import kotlinx.cinterop.*
 import sqlite3.*
 
 class SQLiteContext(internal val ptr: CPointer<sqlite3_context>) {
+	val db: SQLiteDatabase get() = SQLiteDatabase(sqlite3_context_db_handle(ptr)!!)
 
 	fun setResult(value: String) {
 		sqlite3_result_text(ptr, value, value.length, (-1).toLong().toCPointer())
@@ -41,16 +42,14 @@ class SQLiteContext(internal val ptr: CPointer<sqlite3_context>) {
 		sqlite3_result_subtype(ptr, subType)
 	}
 
-	fun setResultToPointer(obj: Any) {
+	fun setResultToPointer(key: String, obj: Any) {
 		sqlite3_result_pointer(
-				ptr,
-				StableRef.create(obj).asCPointer(),
-				null,
+				ptr, StableRef.create(obj).asCPointer(), key,
 				staticCFunction { it -> it!!.asStableRef<Any>().dispose()  }
 		)
 	}
 
-//	fun setResultToValue(value: SQLiteValues) {
-//
-//	}
+	fun setResultToValue(value: SQLiteValue) {
+		sqlite3_result_value(ptr, value.ptr)
+	}
 }

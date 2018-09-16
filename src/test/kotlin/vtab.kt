@@ -13,21 +13,19 @@ object StringSplitter : SQLiteModule() {
 
 		override fun open() : SQLiteVirtualTableCursor = SplitResultCursor()
 
-		override fun bestIndex(constraints: Array<SQLiteIndexConstraint>, orderBys: Array<SQLiteIndexOrderBy>, constraintUsages: Array<SQLiteIndexConstraintUsage>): SQLiteIndexInfo {
+		override fun bestIndex(constraints: Array<SQLiteIndex.Constraint>, orderBys: Array<SQLiteIndex.OrderBy>, constraintUsages: Array<SQLiteIndex.ConstraintUsage>, info: SQLiteIndex.Info) {
 			constraintUsages[0].argvIndex = 1
 			constraintUsages[0].omit = true
 			constraintUsages[1].argvIndex = 2
 			constraintUsages[1].omit = true
 
-			return SQLiteIndexInfo(
-				idxNum = 0,
-				idxStr = null,
-				orderByConsumed = true,
-				estimatedCost = 0.0,
-				estimatedRows = 10,
-				idxFlags = 0,
-				columnsUsed = 2
-			)
+			info.idxNum = 0
+			info.idxStr = null
+			info.orderByConsumed = true
+			info.estimatedCost = 0.0
+			info.estimatedRows = 10
+			info.idxFlags = 0
+			info.columnsUsed = 2
 		}
 
 		override fun rename(newName: String) : Boolean { return false }
@@ -44,11 +42,11 @@ object StringSplitter : SQLiteModule() {
 				get() = rowId >= results.size
 
 			override fun filter(idxNum: Int, idxStr: String?, args: SQLiteValues) {
-				println("FILTER() CALLED ON $this WITH(${args.count}, ${args.getAsString(0)}, ${args.getAsString(1)})")
+				println("FILTER() CALLED ON $this WITH(${args.count}, ${args[0].asString()}, ${args[1].asString()})")
 				if (args.count != 2) throw Exception("Invalid")
 
-				input = args.getAsString(0)!!
-				delimiter = args.getAsString(1)!!
+				input = args[0].asString()!!
+				delimiter = args[1].asString()!!
 
 				results = input.split(delimiter)
 				rowId = 0

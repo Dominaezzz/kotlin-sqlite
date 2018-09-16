@@ -20,12 +20,12 @@ abstract class SQLiteScalarFunction(name: String, argumentCount: Int) : SQLiteFu
 		return getMetadata(paramIndex) ?: create().also { setMetadata(paramIndex, it) }
 	}
 
-	abstract fun function(values: SQLiteValues, context: SQLiteContext)
+	abstract operator fun invoke(values: SQLiteValues, context: SQLiteContext)
 }
 
 abstract class SQLiteAggregateFunction(name: String, argumentCount: Int) : SQLiteFunction(name, argumentCount) {
 	protected fun <T : Any> SQLiteContext.setAggregateContext(aggCtx: T) {
-		val aggCtxPtr = sqlite3_aggregate_context(ptr, COpaquePointerVar.size.toInt())!!.reinterpret<COpaquePointerVar>().pointed
+		val aggCtxPtr = sqlite3_aggregate_context(ptr, sizeOf<COpaquePointerVar>().toInt())!!.reinterpret<COpaquePointerVar>().pointed
 		aggCtxPtr.value?.run { asStableRef<Any>().dispose() }
 		aggCtxPtr.value = StableRef.create(aggCtx).asCPointer()
 	}
