@@ -36,7 +36,7 @@ class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 	fun prepare(sql: String) : Pair<SQLiteStatement, String?> = memScoped {
 		val tailPtr = alloc<CPointerVar<ByteVar>>()
 		val stmtPtr = alloc<CPointerVar<sqlite3_stmt>>()
-		val result = sqlite3_prepare_v3(ptr, sql, sql.length, 0, stmtPtr.ptr, tailPtr.ptr)
+		val result = sqlite3_prepare_v3(ptr, sql.cstr.ptr, sql.length, 0, stmtPtr.ptr, tailPtr.ptr)
 		if (result != SQLITE_OK) {
 			throw SQLiteError("Cannot prepare statement: ${sqlite3_errstr(result)?.toKString()}, $errorMessage")
 		}

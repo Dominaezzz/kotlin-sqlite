@@ -22,7 +22,7 @@ excludedFunctions = sqlite3_mutex_held \
   sqlite3_enable_load_extension \
   sqlite3_load_extension \
   sqlite3_unlock_notify
-
+noStringConversion = sqlite3_prepare_v3
 ---
 struct ksqlite_vtab {
   struct sqlite3_vtab vtab;
