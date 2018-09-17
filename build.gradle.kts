@@ -5,7 +5,7 @@ plugins {
 konanArtifacts {
 	interop("sqlite3") {
 		target("linux") {
-			compilerOpts("-I/usr/include")
+			compilerOpts("-I/usr/include -I/usr/include/x86_64-linux-gnu")
 		}
 		target("macos") {
 			compilerOpts("-I/usr/local/include -I/opt/local/include")
@@ -31,7 +31,7 @@ konanArtifacts {
 			linkerOpts("-L$/usr/local/lib")
 		}
 		target("mingw") {
-			linkerOpts("-LC:/msys64/mingw64/lib")
+			linkerOpts("-LC:/msys64/mingw64/lib -Wl,-Bstatic -lstdc++ -static")
 		}
 		libraries {
 			artifact("ksqlite")
