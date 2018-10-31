@@ -4,8 +4,8 @@ import cnames.structs.sqlite3_value
 import kotlinx.cinterop.*
 import sqlite3.*
 
-class SQLiteValue(val ptr: CPointer<sqlite3_value>) {
-	fun asString() : String? = sqlite3_value_text(ptr)?.toKString()
+inline class SQLiteValue(val ptr: CPointer<sqlite3_value>) {
+	fun asString() : String? = sqlite3_value_text(ptr)?.reinterpret<ByteVar>()?.toKString()
 	fun asLong() : Long = sqlite3_value_int64(ptr)
 	fun asInt() : Int = sqlite3_value_int(ptr)
 	fun asDouble() : Double = sqlite3_value_double(ptr)

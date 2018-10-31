@@ -3,7 +3,7 @@ package ksqlite
 import kotlinx.cinterop.*
 import sqlite3.*
 
-class SQLiteContext(internal val ptr: CPointer<sqlite3_context>) {
+inline class SQLiteContext(val ptr: CPointer<sqlite3_context>) {
 	val db: SQLiteDatabase get() = SQLiteDatabase(sqlite3_context_db_handle(ptr)!!)
 
 	fun setResult(value: String) {
@@ -38,7 +38,7 @@ class SQLiteContext(internal val ptr: CPointer<sqlite3_context>) {
 		sqlite3_result_error(ptr, errorMessage, errorMessage.length)
 	}
 
-	fun setResultToSubType(subType: Int) {
+	fun setResultToSubType(subType: UInt) {
 		sqlite3_result_subtype(ptr, subType)
 	}
 

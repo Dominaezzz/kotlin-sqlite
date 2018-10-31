@@ -1,0 +1,52 @@
+plugins {
+    id 'kotlin-multiplatform' version '1.3.0'
+}
+repositories {
+    maven { url 'http://dl.bintray.com/kotlin/kotlin-eap' }
+    mavenCentral()
+}
+kotlin {
+    targets {
+        // For ARM, preset should be changed to presets.iosArm32 or presets.iosArm64
+        fromPreset(presets.mingwX64, 'native') {
+			compilations.main.cinterops {
+				sqlite3 {
+					includeDirs "C:/msys64/mingw64/include"
+				}
+			}
+			compilations.test.linkerOpts '-LC:/msys64/mingw64/lib -Wl,-Bstatic -lstdc++ -static'
+		}
+        fromPreset(presets.linuxX64, 'linux') {
+			compilations.main.cinterops {
+				sqlite3 {
+					includeDirs "/usr/include", "/usr/include/x86_64-linux-gnu"
+				}
+			}
+			compilations.test.linkerOpts '-L/usr/lib -L/usr/lib/x86_64-linux-gnu'
+		}
+        fromPreset(presets.macosX64, 'macos') {
+			compilations.main.cinterops {
+				sqlite3 {
+					includeDirs "/usr/local/include", "/opt/local/include"
+				}
+			}
+			compilations.test.linkerOpts '-L/usr/local/lib'
+		}
+    }
+    sourceSets {
+        // Note: To enable common source sets please comment out 'kotlin.import.noCommonSourceSets' property
+        // in gradle.properties file and re-import your project in IDE.
+        nativeMain {
+        }
+        nativeTest {
+        }
+    }
+}
+
+kotlin.targets.all {
+	compilations.all { compilation ->
+		tasks.getByName(compilation.compileKotlinTaskName) {
+			kotlinOptions.freeCompilerArgs = ["-XXLanguage:+InlineClasses", "-Xuse-experimental=kotlin.ExperimentalUnsignedTypes"]
+		}
+	}
+}

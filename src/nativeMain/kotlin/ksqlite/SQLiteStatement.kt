@@ -3,7 +3,7 @@ package ksqlite
 import kotlinx.cinterop.*
 import sqlite3.*
 
-class SQLiteStatement(val ptr: CPointer<sqlite3_stmt>) {
+inline class SQLiteStatement(val ptr: CPointer<sqlite3_stmt>) {
 	val db: SQLiteDatabase get() = SQLiteDatabase(sqlite3_db_handle(ptr)!!)
 	val sql: String get() = sqlite3_sql(ptr)!!.toKString()
 	val expandedSql: String? get() = sqlite3_expanded_sql(ptr)?.let {
@@ -110,7 +110,7 @@ class SQLiteStatement(val ptr: CPointer<sqlite3_stmt>) {
 	fun getColumnString(columnIndex: Int) : String? {
 		checkColumnIndex(columnIndex)
 
-		return sqlite3_column_text(ptr, columnIndex)?.toKString()
+		return sqlite3_column_text(ptr, columnIndex)?.reinterpret<ByteVar>()?.toKString()
 	}
 
 	fun getColumnLong(columnIndex: Int) : Long {
