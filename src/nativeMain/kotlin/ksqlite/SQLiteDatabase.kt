@@ -57,36 +57,36 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 		check(result == SQLITE_OK) { "Could not create function!" }
 	}
 
-	fun createFunction(function: SQLiteScalarFunction) {
+	fun createFunction(name: String, nArg: Int, function: SQLiteFunction) {
 		val result = sqlite3_create_function_v2(
-			ptr, function.name, function.argumentCount, SQLITE_UTF8, StableRef.create(function).asCPointer(),
+			ptr, name, nArg, SQLITE_UTF8, StableRef.create(function).asCPointer(),
 			staticCFunction { ctx, nValues, values ->
-				val func = sqlite3_user_data(ctx)!!.asStableRef<SQLiteScalarFunction>().get()
+				val func = sqlite3_user_data(ctx)!!.asStableRef<SQLiteFunction>().get()
 				func(SQLiteValues(values!!, nValues), SQLiteContext(ctx!!))
 			},
 			null,
 			null,
-			staticCFunction { ptr -> ptr!!.asStableRef<SQLiteScalarFunction>().dispose() }
+			staticCFunction { ptr -> ptr!!.asStableRef<SQLiteFunction>().dispose() }
 		)
 		check(result == SQLITE_OK) { "Could not create function!" }
 	}
 
-	fun createFunction(function: SQLiteAggregateFunction) {
+	fun createFunction(name: String, nArg: Int, function: SQLiteFunction.Aggregate) {
 		val result = sqlite3_create_function_v2(
-			ptr, function.name, function.argumentCount, SQLITE_UTF8, StableRef.create(function).asCPointer(),
+			ptr, name, nArg, SQLITE_UTF8, StableRef.create(function).asCPointer(),
 			null,
 			staticCFunction { ctx, nValues, values ->
-				val func = sqlite3_user_data(ctx)!!.asStableRef<SQLiteAggregateFunction>().get()
+				val func = sqlite3_user_data(ctx)!!.asStableRef<SQLiteFunction.Aggregate>().get()
 				func.step(SQLiteValues(values!!, nValues), SQLiteContext(ctx!!))
 			},
 			staticCFunction { ctx ->
-				val func = sqlite3_user_data(ctx)!!.asStableRef<SQLiteAggregateFunction>().get()
+				val func = sqlite3_user_data(ctx)!!.asStableRef<SQLiteFunction.Aggregate>().get()
 				func.final(SQLiteContext(ctx!!))
 				sqlite3_aggregate_context(ctx, 0)?.run {
 					reinterpret<COpaquePointerVar>().pointed.value!!.asStableRef<Any>().dispose()
 				}
 			},
-			staticCFunction { ptr -> ptr!!.asStableRef<SQLiteAggregateFunction>().dispose() }
+			staticCFunction { ptr -> ptr!!.asStableRef<SQLiteFunction.Aggregate>().dispose() }
 		)
 		check(result == SQLITE_OK) { "Could not create function!" }
 	}
@@ -214,10 +214,10 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 
 			try {
 				virtualTable.bestIndex(
-						Array(indexInfo.nConstraint) { SQLiteIndex.Constraint(indexInfo.aConstraint!![it].ptr) },
-						Array(indexInfo.nOrderBy) { SQLiteIndex.OrderBy(indexInfo.aOrderBy!![it].ptr) },
-						Array(indexInfo.nConstraint) { SQLiteIndex.ConstraintUsage(indexInfo.aConstraintUsage!![it].ptr) },
-						SQLiteIndex.Info(pIndexInfo)
+						Array(indexInfo.nConstraint) { Constraint(indexInfo.aConstraint!![it].ptr) },
+						Array(indexInfo.nOrderBy) { OrderBy(indexInfo.aOrderBy!![it].ptr) },
+						Array(indexInfo.nConstraint) { ConstraintUsage(indexInfo.aConstraintUsage!![it].ptr) },
+						SQLiteIndexInfo(pIndexInfo)
 				)
 				SQLITE_OK
 			} catch (t: Throwable) {

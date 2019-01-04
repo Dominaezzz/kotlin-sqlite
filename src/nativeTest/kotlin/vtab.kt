@@ -10,13 +10,13 @@ object StringSplitter : SQLiteModule {
 
 		override fun open() : SQLiteVirtualTableCursor = SplitResultCursor()
 
-		override fun bestIndex(constraints: Array<SQLiteIndex.Constraint>, orderBys: Array<SQLiteIndex.OrderBy>, constraintUsages: Array<SQLiteIndex.ConstraintUsage>, info: SQLiteIndex.Info) {
+		override fun bestIndex(constraints: Array<Constraint>, orderBys: Array<OrderBy>, constraintUsages: Array<ConstraintUsage>, info: SQLiteIndexInfo) {
 			constraintUsages[0].argvIndex = 1
 			constraintUsages[0].omit = true
 			constraintUsages[1].argvIndex = 2
 			constraintUsages[1].omit = true
 
-			info.idxNum = 0
+			info.indexNumber = 0
 			info.idxStr = null
 			info.orderByConsumed = true
 			info.estimatedCost = 0.0
