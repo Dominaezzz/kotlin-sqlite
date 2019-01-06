@@ -1,3 +1,13 @@
+buildscript {
+	repositories {
+		jcenter()
+		maven { url "https://dl.bintray.com/jetbrains/kotlin-native-dependencies" }
+	}
+	dependencies {
+		classpath "com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.2-SNAPSHOT"
+	}
+}
+
 plugins {
     id 'kotlin-multiplatform' version '1.3.11'
     id 'maven-publish'
@@ -6,55 +16,73 @@ repositories {
     mavenCentral()
 }
 
-group 'com.dominaezzz'
-version '0.0.1'
-
 final def os = org.gradle.internal.os.OperatingSystem.current()
 
 kotlin {
-	final def nativePreset = os.isWindows() ? presets.mingwX64
-			: os.isLinux()   ? presets.linuxX64
-			: os.isMacOsX()  ? presets.macosX64
-			: /*unknown host*/ null
-    targets {
-        // For ARM, preset should be changed to presets.iosArm32 or presets.iosArm64
-        fromPreset(nativePreset, 'native') {
-			compilations.main.cinterops {
-				sqlite3 {
-					switch (nativePreset) {
-						case presets.mingwX64:
-							includeDirs "C:/msys64/mingw64/include"
-							break
-						case presets.linuxX64:
-							includeDirs "/usr/include", "/usr/include/x86_64-linux-gnu"
-							break
-						case presets.macosX64:
-							includeDirs "/usr/local/include", "/opt/local/include"
-							break
+	if (os.isWindows() || System.getProperty("idea.active") != "true") {
+		targets {
+			fromPreset(presets.mingwX64, 'mingw') {
+				compilations.main.cinterops {
+					sqlite3 {
+						includeDirs "C:/msys64/mingw64/include"
 					}
 				}
-			}
-			switch (nativePreset) {
-				case presets.mingwX64:
-					compilations.test.linkerOpts '-LC:/msys64/mingw64/lib -Wl,-Bstatic -lstdc++ -static'
-					break
-				case presets.linuxX64:
-					compilations.test.linkerOpts '-L/usr/lib -L/usr/lib/x86_64-linux-gnu'
-					break
-				case presets.macosX64:
-					compilations.test.linkerOpts '-L/usr/local/lib'
-					break
+				compilations.test.linkerOpts '-LC:/msys64/mingw64/lib -Wl,-Bstatic -lstdc++ -static'
 			}
 		}
-    }
-    sourceSets {
-        // Note: To enable common source sets please comment out 'kotlin.import.noCommonSourceSets' property
-        // in gradle.properties file and re-import your project in IDE.
-        nativeMain {
-        }
-        nativeTest {
-        }
-    }
+		sourceSets {
+			mingwMain {
+				kotlin.srcDir('src/nativeMain/kotlin')
+			}
+			mingwTest {
+				kotlin.srcDir('src/nativeTest/kotlin')
+			}
+		}
+	}
+	if (os.isLinux() || System.getProperty("idea.active") != "true") {
+		targets {
+			fromPreset(presets.linuxX64, 'linux') {
+				compilations.main.cinterops {
+					sqlite3 {
+						includeDirs "/usr/include", "/usr/include/x86_64-linux-gnu"
+					}
+				}
+				compilations.test.linkerOpts '-L/usr/lib -L/usr/lib/x86_64-linux-gnu'
+			}
+		}
+		sourceSets {
+			linuxMain {
+				kotlin.srcDir('src/nativeMain/kotlin')
+			}
+			linuxTest {
+				kotlin.srcDir('src/nativeTest/kotlin')
+			}
+		}
+	}
+	if (os.isMacOsX() || System.getProperty("idea.active") != "true") {
+		targets {
+			fromPreset(presets.macosX64, 'macos') {
+				compilations.main.cinterops {
+					sqlite3 {
+						includeDirs "/usr/local/include", "/opt/local/include"
+					}
+				}
+				compilations.test.linkerOpts '-L/usr/local/lib'
+			}
+			if (System.getProperty("idea.active") != "true") {
+				// fromPreset(presets.iosArm32, '')
+				// fromPreset(presets.iosArm64, '')
+			}
+		}
+		sourceSets {
+			macosMain {
+				kotlin.srcDir('src/nativeMain/kotlin')
+			}
+			macosTest {
+				kotlin.srcDir('src/nativeTest/kotlin')
+			}
+		}
+	}
 }
 
 kotlin.targets.all {
@@ -64,3 +92,5 @@ kotlin.targets.all {
 		}
 	}
 }
+
+apply from: rootProject.file("gradle/publish.gradle")
