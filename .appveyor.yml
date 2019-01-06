@@ -7,8 +7,8 @@ build_script:
 
 after_build:
   - gradlew bintrayUpload
-  - copy kotlin-sqlite\build\classes\kotlin\mingw\main\kotlin-sqlite-cinterop-sqlite3.klib sqlite3-mingw.klib
-  - copy kotlin-sqlite\build\classes\kotlin\mingw\main\kotlin-sqlite.klib kotlin-sqlite-mingw.klib
+  - copy build\classes\kotlin\mingw\main\kotlin-sqlite-cinterop-sqlite3.klib sqlite3-mingw.klib
+  - copy build\classes\kotlin\mingw\main\kotlin-sqlite.klib kotlin-sqlite-mingw.klib
 
 artifacts:
   - path: sqlite3-mingw.klib
@@ -17,5 +17,6 @@ artifacts:
     name: library
 
 environment:
+  BINTRAY_USER: dominaezzz
   BINTRAY_API_KEY:
     secure: 5NvV6wSGSu+wgrBkD+jQidMAJXDLwP6Ebz4Vjhkgm+Ok7okR+vG46ZJRsTB57/i5
