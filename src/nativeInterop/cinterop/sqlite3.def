@@ -2,7 +2,9 @@ package = sqlite3
 headers = sqlite3.h
 headerFilter = sqlite3*.h
 compilerOpts = -std=c11
-linkerOpts = -lsqlite3
+linkerOpts.mingw = -lsqlite3
+linkerOpts.osx = -lsqlite3
+linkerOpts.linux = -L/usr/lib -L/usr/lib/x86_64-linux-gnu -lsqlite3
 excludedFunctions = sqlite3_mutex_held \
   sqlite3_mutex_notheld \
   sqlite3_snapshot_cmp \

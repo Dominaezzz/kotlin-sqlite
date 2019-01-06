@@ -47,7 +47,7 @@ kotlin {
 						includeDirs "/usr/include", "/usr/include/x86_64-linux-gnu"
 					}
 				}
-				compilations.test.linkerOpts '-L/usr/lib -L/usr/lib/x86_64-linux-gnu'
+				// compilations.test.linkerOpts '-L/usr/lib -L/usr/lib/x86_64-linux-gnu'
 			}
 		}
 		sourceSets {
