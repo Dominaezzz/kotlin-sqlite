@@ -17,5 +17,5 @@ inline class SQLiteValue(val ptr: CPointer<sqlite3_value>) {
 			else -> null
 		}
 	}
-	fun asPointer(key: String) : Any? = sqlite3_value_pointer(ptr, key)?.let { it.asStableRef<Any>().get() }
+//	fun asPointer(key: String) : Any? = sqlite3_value_pointer(ptr, key)?.let { it.asStableRef<Any>().get() }
 }

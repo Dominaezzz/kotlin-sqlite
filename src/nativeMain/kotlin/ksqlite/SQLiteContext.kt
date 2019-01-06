@@ -38,16 +38,16 @@ inline class SQLiteContext(val ptr: CPointer<sqlite3_context>) {
 		sqlite3_result_error(ptr, errorMessage, errorMessage.length)
 	}
 
-	fun setResultToSubType(subType: UInt) {
-		sqlite3_result_subtype(ptr, subType)
-	}
-
-	fun setResultToPointer(key: String, obj: Any) {
-		sqlite3_result_pointer(
-				ptr, StableRef.create(obj).asCPointer(), key,
-				staticCFunction { it -> it!!.asStableRef<Any>().dispose()  }
-		)
-	}
+//	fun setResultToSubType(subType: UInt) {
+//		sqlite3_result_subtype(ptr, subType)
+//	}
+//
+//	fun setResultToPointer(key: String, obj: Any) {
+//		sqlite3_result_pointer(
+//				ptr, StableRef.create(obj).asCPointer(), key,
+//				staticCFunction { it -> it!!.asStableRef<Any>().dispose()  }
+//		)
+//	}
 
 	fun setResultToValue(value: SQLiteValue) {
 		sqlite3_result_value(ptr, value.ptr)

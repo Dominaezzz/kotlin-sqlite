@@ -6,13 +6,13 @@ import sqlite3.*
 inline class SQLiteStatement(val ptr: CPointer<sqlite3_stmt>) {
 	val db: SQLiteDatabase get() = SQLiteDatabase(sqlite3_db_handle(ptr)!!)
 	val sql: String get() = sqlite3_sql(ptr)!!.toKString()
-	val expandedSql: String? get() = sqlite3_expanded_sql(ptr)?.let {
-			try {
-				it.toKString()
-			} finally {
-				sqlite3_free(it)
-			}
-		}
+//	val expandedSql: String? get() = sqlite3_expanded_sql(ptr)?.let {
+//			try {
+//				it.toKString()
+//			} finally {
+//				sqlite3_free(it)
+//			}
+//		}
 	val isBusy: Boolean get() = sqlite3_stmt_busy(ptr) == 1
 	val isReadOnly: Boolean get() = sqlite3_stmt_readonly(ptr) == 1
 	val parameterCount: Int get() = sqlite3_bind_parameter_count(ptr)
@@ -67,12 +67,12 @@ inline class SQLiteStatement(val ptr: CPointer<sqlite3_stmt>) {
 		checkBind(sqlite3_bind_value(ptr, paramIndex, value.ptr))
 	}
 
-	fun bindPointer(paramIndex: Int, key: String, value: Any) {
-		checkBind(sqlite3_bind_pointer(
-				ptr, paramIndex, StableRef.create(value).asCPointer(), key,
-				staticCFunction { it -> it!!.asStableRef<Any>().dispose() }
-		))
-	}
+//	fun bindPointer(paramIndex: Int, key: String, value: Any) {
+//		checkBind(sqlite3_bind_pointer(
+//				ptr, paramIndex, StableRef.create(value).asCPointer(), key,
+//				staticCFunction { it -> it!!.asStableRef<Any>().dispose() }
+//		))
+//	}
 
 	fun bindNull(paramIndex: Int) {
 		checkBind(sqlite3_bind_null(ptr, paramIndex))

@@ -164,7 +164,7 @@ interface SQLiteVirtualTable {
 		 * If [noChange] is invoked anywhere other than within an [update] method call for an UPDATE statement,
 		 * then the return value is arbitrary and meaningless.
 		 **/
-		val SQLiteValue.noChange: Boolean get() = sqlite3_value_nochange(ptr) != 0
+//		val SQLiteValue.noChange: Boolean get() = sqlite3_value_nochange(ptr) != 0
 	}
 
 	interface Transactions : SQLiteVirtualTable {

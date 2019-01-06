@@ -42,15 +42,15 @@ class SQLiteIndexInfo(private val ptr: CPointer<sqlite3_index_info>) {
         get() = ptr.pointed.estimatedRows
         set(value) { ptr.pointed.estimatedRows = value }
 
-    /** Mask of SQLITE_INDEX_SCAN_* flags. (Only available in SQLite 3.9.0 and later) */
-    var idxFlags: Int
-        get() = ptr.pointed.idxFlags
-        set(value) { ptr.pointed.idxFlags = value }
-
-    /** Input: Mask of columns used by statement. (Only available in SQLite 3.10.0 and later) */
-    var columnsUsed: ULong
-        get() = ptr.pointed.colUsed
-        set(value) { ptr.pointed.colUsed = value}
+//    /** Mask of SQLITE_INDEX_SCAN_* flags. (Only available in SQLite 3.9.0 and later) */
+//    var idxFlags: Int
+//        get() = ptr.pointed.idxFlags
+//        set(value) { ptr.pointed.idxFlags = value }
+//
+//    /** Input: Mask of columns used by statement. (Only available in SQLite 3.10.0 and later) */
+//    var columnsUsed: ULong
+//        get() = ptr.pointed.colUsed
+//        set(value) { ptr.pointed.colUsed = value}
 }
 
 enum class ConstraintOp(val value: UByte) {
@@ -60,35 +60,35 @@ enum class ConstraintOp(val value: UByte) {
     LT(SQLITE_INDEX_CONSTRAINT_LT.toUByte()),
     GE(SQLITE_INDEX_CONSTRAINT_GE.toUByte()),
     MATCH(SQLITE_INDEX_CONSTRAINT_MATCH.toUByte()),
-    /** 3.10.0 and later */
-    LIKE(SQLITE_INDEX_CONSTRAINT_LIKE.toUByte()),
-
-    /** 3.10.0 and later */
-    GLOB(SQLITE_INDEX_CONSTRAINT_GLOB.toUByte()),
-
-    /** 3.10.0 and later */
-    REGEXP(SQLITE_INDEX_CONSTRAINT_REGEXP.toUByte()),
-
-    /** 3.21.0 and later */
-    NE(SQLITE_INDEX_CONSTRAINT_NE.toUByte()),
-
-    /** 3.21.0 and later */
-    ISNOT(SQLITE_INDEX_CONSTRAINT_ISNOT.toUByte()),
-
-    /** 3.21.0 and later */
-    ISNOTNULL(SQLITE_INDEX_CONSTRAINT_ISNOTNULL.toUByte()),
-
-    /** 3.21.0 and later */
-    ISNULL(SQLITE_INDEX_CONSTRAINT_ISNULL.toUByte()),
-
-    /** 3.21.0 and later */
-    IS(SQLITE_INDEX_CONSTRAINT_IS.toUByte()),
-
-//		/** 3.25.0 and later */
-//		FUNCTION(SQLITE_INDEX_CONSTRAINT_FUNCTION),
-
-    /** Scan visits at most 1 row */
-    SCAN_UNIQUE(SQLITE_INDEX_SCAN_UNIQUE.toUByte())
+//    /** 3.10.0 and later */
+//    LIKE(SQLITE_INDEX_CONSTRAINT_LIKE.toUByte()),
+//
+//    /** 3.10.0 and later */
+//    GLOB(SQLITE_INDEX_CONSTRAINT_GLOB.toUByte()),
+//
+//    /** 3.10.0 and later */
+//    REGEXP(SQLITE_INDEX_CONSTRAINT_REGEXP.toUByte()),
+//
+//    /** 3.21.0 and later */
+//    NE(SQLITE_INDEX_CONSTRAINT_NE.toUByte()),
+//
+//    /** 3.21.0 and later */
+//    ISNOT(SQLITE_INDEX_CONSTRAINT_ISNOT.toUByte()),
+//
+//    /** 3.21.0 and later */
+//    ISNOTNULL(SQLITE_INDEX_CONSTRAINT_ISNOTNULL.toUByte()),
+//
+//    /** 3.21.0 and later */
+//    ISNULL(SQLITE_INDEX_CONSTRAINT_ISNULL.toUByte()),
+//
+//    /** 3.21.0 and later */
+//    IS(SQLITE_INDEX_CONSTRAINT_IS.toUByte()),
+//
+////		/** 3.25.0 and later */
+////		FUNCTION(SQLITE_INDEX_CONSTRAINT_FUNCTION),
+//
+//    /** Scan visits at most 1 row */
+//    SCAN_UNIQUE(SQLITE_INDEX_SCAN_UNIQUE.toUByte())
 }
 
 inline class Constraint(private val constraint: CPointer<sqlite3_index_constraint>) {
