@@ -119,23 +119,23 @@ fun testExecuteResult(db: SQLiteDatabase) {
 	}
 }
 
-fun testStatementBinding(db: SQLiteDatabase) {
-	db.withStmt("INSERT INTO LOL(name, age) VALUES (?, ?);") { stmt ->
-		println(stmt.sql)
-
-		stmt.bind(1, "Dominic")
-		println(stmt.expandedSql)
-
-		stmt.bind(2, 19)
-		println(stmt.expandedSql)
-
-		stmt.bind(1, "Fischer")
-		println(stmt.expandedSql)
-
-		stmt.bind(2, 40540)
-		println(stmt.expandedSql)
-	}
-}
+//fun testStatementBinding(db: SQLiteDatabase) {
+//	db.withStmt("INSERT INTO LOL(name, age) VALUES (?, ?);") { stmt ->
+//		println(stmt.sql)
+//
+//		stmt.bind(1, "Dominic")
+//		println(stmt.expandedSql)
+//
+//		stmt.bind(2, 19)
+//		println(stmt.expandedSql)
+//
+//		stmt.bind(1, "Fischer")
+//		println(stmt.expandedSql)
+//
+//		stmt.bind(2, 40540)
+//		println(stmt.expandedSql)
+//	}
+//}
 
 fun testStatementQuery(db: SQLiteDatabase) {
 	db.withStmt("SELECT * FROM LOL;") { stmt ->

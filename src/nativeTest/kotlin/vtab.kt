@@ -21,8 +21,8 @@ object StringSplitter : SQLiteModule {
 			info.orderByConsumed = true
 			info.estimatedCost = 0.0
 			info.estimatedRows = 10
-			info.idxFlags = 0
-			info.columnsUsed = 2U
+//			info.idxFlags = 0
+//			info.columnsUsed = 2U
 		}
 
 		class SplitResultCursor : SQLiteVirtualTableCursor {
