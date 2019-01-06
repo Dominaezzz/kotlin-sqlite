@@ -58,6 +58,7 @@ object StringSplitter : SQLiteModule {
 }
 
 @Test
+@Ignore
 fun `Custom Table Valued Function`() {
 	withSqlite(":memory:") { db ->
 		db.createModule("split_string", StringSplitter)
