@@ -22,7 +22,10 @@ script:
 
 after_success:
   - |
-    ./gradlew bintrayUpload
+    if [[ "x${TRAVIS_TAG}" != "x" ]]
+    then
+      ./gradlew bintrayUpload
+    fi
   - |
     case "${TRAVIS_OS_NAME}" in
       osx)   export TARGET=macos ;;

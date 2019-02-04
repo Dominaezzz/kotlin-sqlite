@@ -1,5 +1,9 @@
 # kotlin-sqlite
 
+[![Build Status](https://travis-ci.com/Dominaezzz/kotlin-sqlite.svg?branch=master)](https://travis-ci.com/Dominaezzz/kotlin-sqlite)
+[![Build status](https://ci.appveyor.com/api/projects/status/github/Dominaezzz/kotlin-sqlite?branch=master&svg=true)](https://ci.appveyor.com/project/Dominaezzz/kotlin-sqlite)
+[![Download](https://api.bintray.com/packages/dominaezzz/kotlin-native/kotlin-sqlite/images/download.svg)](https://bintray.com/dominaezzz/kotlin-native/kotlin-sqlite/_latestVersion)
+
 [Kotlin/Native](https://github.com/JetBrains/kotlin-native) bindings to the
 [sqlite](https://www.sqlite.org) C library.
 

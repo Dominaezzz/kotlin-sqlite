@@ -7,6 +7,6 @@ pluginManagement {
         }
     }
 }
-rootProject.name = 'kotlin-sqlite'
+rootProject.name = "kotlin-sqlite"
 
 enableFeaturePreview("GRADLE_METADATA")
