@@ -1,3 +1,4 @@
+import de.undercouch.gradle.tasks.download.Download
 import java.io.ByteArrayOutputStream
 import org.gradle.internal.os.OperatingSystem
 
@@ -5,12 +6,73 @@ plugins {
     kotlin("multiplatform") version("1.3.21")
     id("maven-publish")
 	id("com.jfrog.bintray") version("1.8.4-jetbrains-3")
+	id("de.undercouch.download") version("3.4.3")
 }
 repositories {
     mavenCentral()
 }
 
 val os = OperatingSystem.current()!!
+
+val sqliteSrcFolder = buildDir.resolve("sqlite_src/sqlite-amalgamation-3270100")
+
+val downloadSQLiteSources by tasks.creating(Download::class) {
+	src("https://www.sqlite.org/2019/sqlite-amalgamation-3270100.zip")
+	dest(buildDir.resolve("sqlite_src/sqlite-amalgamation-3270100.zip"))
+	overwrite(false)
+}
+
+val unzipSQLiteSources by tasks.creating(Copy::class) {
+	dependsOn(downloadSQLiteSources)
+
+	from(zipTree(downloadSQLiteSources.dest))
+	into(buildDir.resolve("sqlite_src"))
+}
+
+val buildSQLite by tasks.creating {
+	dependsOn(unzipSQLiteSources)
+
+	val konanUserDir = System.getenv("KONAN_DATA_DIR") ?: "${System.getProperty("user.home")}/.konan"
+	val konanLLVMDir = "$konanUserDir/dependencies/msys2-mingw-w64-x86_64-gcc-7.3.0-clang-llvm-lld-6.0.1/bin"
+
+	doLast {
+		exec {
+			workingDir = sqliteSrcFolder
+
+			if (os.isWindows) {
+				environment("Path", "$konanLLVMDir;${System.getenv("Path")}")
+				executable = "$konanLLVMDir/gcc"
+			} else {
+				executable = "gcc"
+				args("-lpthread", "-dl")
+			}
+
+			args(
+				"-DSQLITE_ENABLE_FTS3",
+				"-DSQLITE_ENABLE_FTS5",
+				"-DSQLITE_ENABLE_RTREE",
+				"-DSQLITE_ENABLE_DBSTAT_VTAB",
+				"-DSQLITE_ENABLE_JSON1",
+				"-DSQLITE_ENABLE_RBU"
+			)
+
+			args("-c", "sqlite3.c", "-o", "sqlite3.o")
+		}
+
+		exec {
+			workingDir = sqliteSrcFolder
+
+			if (os.isWindows) {
+				environment("Path", "$konanLLVMDir;${System.getenv("Path")}")
+				executable = "$konanLLVMDir/ar"
+			} else {
+				executable = "ar"
+			}
+
+			args("rcs", "libsqlite3.a", "sqlite3.o")
+		}
+	}
+}
 
 kotlin {
 	val isIdeaActive = System.getProperty("idea.active") == "true"
@@ -21,14 +83,15 @@ kotlin {
 				kotlin.srcDir("src/nativeMain/kotlin")
 			}
 			cinterops.create("sqlite3") {
-				includeDirs("C:/msys64/mingw64/include")
+				includeDirs(sqliteSrcFolder)
+
+				tasks[interopProcessingTaskName].dependsOn(buildSQLite)
 			}
 		}
 		val test by compilations.getting {
 			defaultSourceSet {
 				kotlin.srcDir("src/nativeTest/kotlin")
 			}
-			linkerOpts("-LC:/msys64/mingw64/lib -Wl,-Bstatic -lstdc++ -static")
 		}
 	}
 	if (os.isLinux || !isIdeaActive) linuxX64("linux") {
@@ -37,14 +100,15 @@ kotlin {
 				kotlin.srcDir("src/nativeMain/kotlin")
 			}
 			cinterops.create("sqlite3") {
-				includeDirs("/usr/include", "/usr/include/x86_64-linux-gnu")
+				includeDirs(sqliteSrcFolder)
+
+				tasks[interopProcessingTaskName].dependsOn(buildSQLite)
 			}
 		}
 		val test by compilations.getting {
 			defaultSourceSet {
 				kotlin.srcDir("src/nativeTest/kotlin")
 			}
-			linkerOpts("-L/usr/lib -L/usr/lib/x86_64-linux-gnu")
 		}
 	}
 	if (os.isMacOsX || !isIdeaActive) macosX64("macos") {
@@ -53,18 +117,16 @@ kotlin {
 				kotlin.srcDir("src/nativeMain/kotlin")
 			}
 			cinterops.create("sqlite3") {
-				includeDirs("/usr/local/include", "/opt/local/include")
+				includeDirs(sqliteSrcFolder)
+
+				tasks[interopProcessingTaskName].dependsOn(buildSQLite)
 			}
 		}
 		val test by compilations.getting {
 			defaultSourceSet {
 				kotlin.srcDir("src/nativeTest/kotlin")
 			}
-			linkerOpts("-L/usr/local/lib")
 		}
-
-//		iosArm32()
-//		iosArm64()
 	}
 }
 
