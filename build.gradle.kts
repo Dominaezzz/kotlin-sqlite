@@ -32,16 +32,12 @@ val unzipSQLiteSources by tasks.creating(Copy::class) {
 val buildSQLite by tasks.creating {
 	dependsOn(unzipSQLiteSources)
 
-	val konanUserDir = System.getenv("KONAN_DATA_DIR") ?: "${System.getProperty("user.home")}/.konan"
-	val konanLLVMDir = "$konanUserDir/dependencies/msys2-mingw-w64-x86_64-gcc-7.3.0-clang-llvm-lld-6.0.1/bin"
-
 	doLast {
 		exec {
 			workingDir = sqliteSrcFolder
 
 			if (os.isWindows) {
-				environment("Path", "$konanLLVMDir;${System.getenv("Path")}")
-				executable = "$konanLLVMDir/gcc"
+				executable = "C:/msys64/mingw64/bin/gcc"
 			} else {
 				executable = "gcc"
 				args("-lpthread", "-dl")
@@ -62,11 +58,10 @@ val buildSQLite by tasks.creating {
 		exec {
 			workingDir = sqliteSrcFolder
 
-			if (os.isWindows) {
-				environment("Path", "$konanLLVMDir;${System.getenv("Path")}")
-				executable = "$konanLLVMDir/ar"
+			executable = if (os.isWindows) {
+				"C:/msys64/mingw64/bin/ar"
 			} else {
-				executable = "ar"
+				"ar"
 			}
 
 			args("rcs", "libsqlite3.a", "sqlite3.o")

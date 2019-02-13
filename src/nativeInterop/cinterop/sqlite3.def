@@ -6,8 +6,6 @@ compilerOpts = -std=c11
 staticLibraries = libsqlite3.a
 libraryPaths = build/sqlite_src/sqlite-amalgamation-3270100
 
-linkerOpts.osx = -pthreads -ldl
-linkerOpts.linux = -pthreads -ldl
 excludedFunctions = sqlite3_mutex_held \
   sqlite3_mutex_notheld \
   sqlite3_snapshot_cmp \
