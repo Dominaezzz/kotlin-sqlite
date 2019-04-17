@@ -36,12 +36,12 @@ val buildSQLite by tasks.creating {
 		exec {
 			workingDir = sqliteSrcFolder
 
-			if (os.isWindows) {
-				executable = "C:/msys64/mingw64/bin/gcc"
+			executable = if (os.isWindows) {
+				"C:/msys64/mingw64/bin/gcc"
 			} else {
-				executable = "gcc"
-				args("-lpthread", "-dl")
+				"gcc"
 			}
+			args("-lpthread", "-dl")
 
 			args(
 				"-DSQLITE_ENABLE_FTS3",
