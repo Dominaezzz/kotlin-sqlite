@@ -4,7 +4,7 @@ before_build:
   - C:\msys64\usr\bin\pacman --noconfirm -S mingw-w64-x86_64-gcc
 
 build_script:
-  - gradlew build
+  - gradlew build --info
 
 after_build:
   - if %APPVEYOR_REPO_TAG%==true ( gradlew bintrayUpload )
