@@ -1,24 +1,16 @@
 import java.io.ByteArrayOutputStream
-
-buildscript {
-	repositories {
-		jcenter()
-		maven(url = "https://dl.bintray.com/jetbrains/kotlin-native-dependencies")
-	}
-	dependencies {
-		classpath("com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4-jetbrains-3")
-	}
-}
+import org.gradle.internal.os.OperatingSystem
 
 plugins {
-    kotlin("multiplatform") version("1.3.20")
+    kotlin("multiplatform") version("1.3.21")
     id("maven-publish")
+	id("com.jfrog.bintray") version("1.8.4-jetbrains-3")
 }
 repositories {
     mavenCentral()
 }
 
-val os = org.gradle.internal.os.OperatingSystem.current()!!
+val os = OperatingSystem.current()!!
 
 kotlin {
 	val isIdeaActive = System.getProperty("idea.active") == "true"
