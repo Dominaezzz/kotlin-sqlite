@@ -36,11 +36,7 @@ val buildSQLite by tasks.creating {
 		exec {
 			workingDir = sqliteSrcFolder
 
-			executable = if (os.isWindows) {
-				"C:/msys64/mingw64/bin/gcc"
-			} else {
-				"gcc"
-			}
+			executable = "gcc"
 			args("-lpthread", "-dl")
 
 			args(
