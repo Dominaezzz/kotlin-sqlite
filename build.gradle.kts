@@ -53,12 +53,7 @@ val buildSQLite by tasks.creating {
 
 		exec {
 			workingDir = sqliteSrcFolder
-
-			executable = if (os.isWindows) {
-				"C:/msys64/mingw64/bin/ar"
-			} else {
-				"ar"
-			}
+			executable = "ar"
 
 			args("rcs", "libsqlite3.a", "sqlite3.o")
 		}
