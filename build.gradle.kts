@@ -6,7 +6,7 @@ import org.jetbrains.kotlin.konan.target.HostManager
 
 plugins {
     kotlin("multiplatform") version("1.3.30")
-    id("maven-publish")
+	`maven-publish`
 	id("com.jfrog.bintray") version("1.8.4-jetbrains-3")
 	id("de.undercouch.download") version("3.4.3")
 }
