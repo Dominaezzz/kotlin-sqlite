@@ -1,11 +1,11 @@
 import de.undercouch.gradle.tasks.download.Download
 import org.apache.commons.lang.SystemUtils
 import java.io.ByteArrayOutputStream
-import org.gradle.internal.os.OperatingSystem
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.konan.target.HostManager
 
 plugins {
-    kotlin("multiplatform") version("1.3.21")
+    kotlin("multiplatform") version("1.3.30")
     id("maven-publish")
 	id("com.jfrog.bintray") version("1.8.4-jetbrains-3")
 	id("de.undercouch.download") version("3.4.3")
@@ -98,6 +98,37 @@ kotlin {
 			useExperimentalAnnotation("kotlin.ExperimentalUnsignedTypes")
 		}
 	}
+
+	// Hack until https://youtrack.jetbrains.com/issue/KT-30498
+	targets.filterIsInstance<KotlinNativeTarget>()
+		.filter { it.konanTarget != HostManager.host }
+		.forEach { target ->
+			configure(target.compilations) {
+				configure(cinterops) {
+					project.tasks[interopProcessingTaskName].enabled = false
+				}
+
+				compileKotlinTask.enabled = false
+			}
+			configure(target.binaries) {
+				linkTask.enabled = false
+			}
+
+			target.mavenPublication(Action {
+				val publicationToDisable = this
+
+				tasks.withType<AbstractPublishToMaven> {
+					onlyIf {
+						publication != publicationToDisable
+					}
+				}
+				tasks.withType<GenerateModuleMetadata> {
+					onlyIf {
+						publication.get() != publicationToDisable
+					}
+				}
+			})
+		}
 }
 
 val stdout = ByteArrayOutputStream()
