@@ -66,6 +66,7 @@ withSqlite("dbPtr") { db ->
 Will have to look at the unit tests for more examples.
 
 ## Notes
+* SQLite binaries are bundled with KLIBs.
 
 * The bindings are not final, nicely wrapping SQLite's C API is a WIP.
 
