@@ -142,3 +142,15 @@ version = stdout.toString().trim()
 apply {
 	from(rootProject.file("gradle/publish.gradle"))
 }
+
+bintray {
+	project.publishing.publications.all {
+		if ((name != "windows" || SystemUtils.IS_OS_WINDOWS) &&
+			(name != "macos" || SystemUtils.IS_OS_WINDOWS) &&
+			(name != "linux" || SystemUtils.IS_OS_WINDOWS)
+		) {
+			// Bintray DSL doesn't allow writing just `publication += name` :(
+			this@bintray.setPublications(*publications, name)
+		}
+	}
+}
