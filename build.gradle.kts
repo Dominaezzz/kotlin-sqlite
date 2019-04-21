@@ -36,6 +36,9 @@ val compileSQLite by tasks.registering(Exec::class) {
 
 	workingDir = sqliteSrcFolder
 
+	inputs.file(workingDir.resolve("sqlite3.c"))
+	outputs.file(workingDir.resolve("sqlite3.o"))
+
 	executable = "gcc"
 	args("-lpthread", "-ldl")
 
@@ -55,6 +58,10 @@ val archiveSQLite by tasks.registering(Exec::class) {
 	dependsOn(compileSQLite)
 
 	workingDir = sqliteSrcFolder
+
+	inputs.file(workingDir.resolve("sqlite3.o"))
+	outputs.file(workingDir.resolve("libsqlite3.a"))
+
 	executable = "ar"
 
 	args("rcs", "libsqlite3.a", "sqlite3.o")
