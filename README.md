@@ -67,8 +67,6 @@ Will have to look at the unit tests for more examples.
 
 ## Notes
 
-* Only tested on WSL and Windows but should work on Linux and Mac.
-
 * The bindings are not final, nicely wrapping SQLite's C API is a WIP.
 
 * Contributions are welcome.
