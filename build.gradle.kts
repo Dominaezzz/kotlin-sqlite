@@ -37,7 +37,7 @@ val compileSQLite by tasks.registering(Exec::class) {
 	workingDir = sqliteSrcFolder
 
 	executable = "gcc"
-	args("-lpthread", "-dl")
+	args("-lpthread", "-ldl")
 
 	args(
 		"-DSQLITE_ENABLE_FTS3",
