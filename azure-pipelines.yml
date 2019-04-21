@@ -43,3 +43,6 @@ steps:
       tasks: 'bintrayUpload'
     condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/'))
     displayName: 'Publish artifacts to Bintray'
+    env:
+      BINTRAY_API_KEY: $(BINTRAY_API_KEY)
+      BINTRAY_USER: $(BINTRAY_USER)
