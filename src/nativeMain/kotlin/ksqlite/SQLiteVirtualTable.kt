@@ -1,7 +1,5 @@
 package ksqlite
 
-import sqlite3.*
-
 interface SQLiteVirtualTable {
 	val declaration: String
 
@@ -139,8 +137,8 @@ interface SQLiteVirtualTable {
 	 * Contrast this method with [Persist.destroy]. [Persist.destroy] is a destructor for the entire virtual table.
 	 * */
 	fun disconnect() {}
-	
-	// fun findFunction(nArg: Int, name: String) : (SQLiteContext, SQLiteValues) -> Unit
+
+	fun findFunction(nArg: Int, name: String): SQLiteFunction? = null
 
 	// If not used then read-only.
 	interface Persist : SQLiteVirtualTable {

@@ -272,14 +272,23 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 		if (false) {
 			rawModule.xFindFunction = staticCFunction { pVTab, nArg, zName, pXFunc, ppArg ->
 				val virtualTable = pVTab!!.getVirtualTable()
+				val function: SQLiteFunction?
 				try {
-
+					function = virtualTable.findFunction(nArg, zName!!.toKString())
 				} catch (t: Throwable) {
 					return@staticCFunction SQLITE_ERROR
 				}
 
-				// TODO
-				SQLITE_OK
+				if (function != null) {
+					ppArg!!.pointed.value = StableRef.create(function).asCPointer()
+					pXFunc!!.pointed.value = staticCFunction { ctx, nValues, values ->
+						val func = sqlite3_user_data(ctx)!!.asStableRef<SQLiteFunction>().get()
+						func(SQLiteValues(values!!, nValues), SQLiteContext(ctx!!))
+					}
+					1
+				} else {
+					0
+				}
 			}
 		}
 
