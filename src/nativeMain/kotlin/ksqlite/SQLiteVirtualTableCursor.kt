@@ -1,6 +1,6 @@
 package ksqlite
 
-//import sqlite3.sqlite3_vtab_nochange
+import sqlite3.sqlite3_vtab_nochange
 
 interface SQLiteVirtualTableCursor {
 	val rowId: Long
@@ -19,5 +19,5 @@ interface SQLiteVirtualTableCursor {
 	 * then the [column] method can optionally return without setting a result, without calling [SQLiteContext.setResult].
 	 * In that case, [SQLiteVirtualTable.Persist.noChange] will return true for the same column in the [SQLiteVirtualTable.Persist.update] method.
 	 * */
-//	val SQLiteContext.noChange: Boolean get() = sqlite3_vtab_nochange(ptr) != 0
+	val SQLiteContext.noChange: Boolean get() = sqlite3_vtab_nochange(ptr) != 0
 }

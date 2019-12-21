@@ -33,7 +33,7 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 		}
 	}
 
-	fun prepare(sql: String) : Pair<SQLiteStatement, String?> = memScoped {
+	fun prepare(sql: String): Pair<SQLiteStatement, String?> = memScoped {
 		val tailPtr = alloc<CPointerVar<ByteVar>>()
 		val stmtPtr = alloc<CPointerVar<sqlite3_stmt>>()
 		val result = sqlite3_prepare_v2(ptr, sql.cstr.ptr, sql.length, stmtPtr.ptr, tailPtr.ptr)
@@ -345,7 +345,7 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 	}
 
 	companion object {
-		fun open(path: String = ":memory:") : SQLiteDatabase {
+		fun open(path: String = ":memory:"): SQLiteDatabase {
 			return memScoped {
 				val dbPtr = alloc<CPointerVar<sqlite3>>()
 				if (sqlite3_open_v2(path, dbPtr.ptr, SQLITE_OPEN_READWRITE or SQLITE_OPEN_CREATE, null) != 0) {

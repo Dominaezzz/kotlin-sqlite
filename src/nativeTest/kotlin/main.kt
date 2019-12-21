@@ -3,7 +3,7 @@ import kotlin.test.*
 
 @Test
 fun `But... does it work?`() {
-	withSqlite(":memory:") { db ->
+	usingSqlite(":memory:") { db ->
 		db.execute("SELECT 'It works!';") { _, data ->
 			assertEquals(data[0], "It works!", "Uh oh")
 			0
@@ -13,8 +13,8 @@ fun `But... does it work?`() {
 
 @Test
 fun `Store and load BLOB`() {
-	withSqlite("temp.db") { db ->
-		db.withStmt("SELECT ?;") { stmt ->
+	usingSqlite("temp.db") { db ->
+		db.usingStmt("SELECT ?;") { stmt ->
 			val expected = byteArrayOf(1, 2, 3, 0, 6, 5, 4)
 
 			stmt.bind(1, expected)
@@ -35,7 +35,7 @@ fun `Custom Scalar Function`() {
 		}
 	}
 
-	withSqlite("temp.db") { db ->
+	usingSqlite("temp.db") { db ->
 		db.createFunction("LOL", 0, lol)
 
 		lateinit var output: String
@@ -65,7 +65,7 @@ fun `Custom Aggregate Function`() {
 		}
 	}
 
-	withSqlite("temp.db") { db ->
+	usingSqlite("temp.db") { db ->
 		db.createFunction("LOL", 1, lol)
 
 		lateinit var output: String
@@ -88,7 +88,7 @@ fun `Custom Aggregate Function`() {
 fun initdb(db: SQLiteDatabase) {
 	db.execute("DROP TABLE IF EXISTS LOL;")
 	db.execute("CREATE TABLE LOL(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, age INTEGER NOT NULL);")
-	db.withStmt("INSERT INTO LOL(name, age) VALUES (?, ?);") { stmt ->
+	db.usingStmt("INSERT INTO LOL(name, age) VALUES (?, ?);") { stmt ->
 		stmt.bind(1, "Dominic")
 		stmt.bind(2, 19)
 		stmt.step()
@@ -139,7 +139,7 @@ fun testExecuteResult(db: SQLiteDatabase) {
 //}
 
 fun testStatementQuery(db: SQLiteDatabase) {
-	db.withStmt("SELECT * FROM LOL;") { stmt ->
+	db.usingStmt("SELECT * FROM LOL;") { stmt ->
 		while (stmt.step()) {
 			println("id=${stmt.getColumnInt(0)}, name=${stmt.getColumnString(1)}, age=${stmt.getColumnLong(2)};")
 		}
@@ -147,7 +147,7 @@ fun testStatementQuery(db: SQLiteDatabase) {
 }
 
 fun main(args: Array<String>) {
-	withSqlite("temp.db") { db ->
+	usingSqlite("temp.db") { db ->
 		println("SQLite Version: ${db.version}")
 
 		initdb(db)

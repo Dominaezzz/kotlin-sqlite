@@ -7,11 +7,11 @@ inline class SQLiteContext(val ptr: CPointer<sqlite3_context>) {
 	val db: SQLiteDatabase get() = SQLiteDatabase(sqlite3_context_db_handle(ptr)!!)
 
 	fun setResult(value: String) {
-		sqlite3_result_text(ptr, value, value.length, (-1).toLong().toCPointer())
+		sqlite3_result_text(ptr, value, value.length, SQLITE_TRANSIENT)
 	}
 
 	fun setResult(value: ByteArray) {
-	    sqlite3_result_blob(ptr, value.refTo(0), value.size, (-1).toLong().toCPointer())
+	    sqlite3_result_blob(ptr, value.refTo(0), value.size, SQLITE_TRANSIENT)
 	}
 
 	fun setResult(value: Double) {
@@ -38,16 +38,16 @@ inline class SQLiteContext(val ptr: CPointer<sqlite3_context>) {
 		sqlite3_result_error(ptr, errorMessage, errorMessage.length)
 	}
 
-//	fun setResultToSubType(subType: UInt) {
-//		sqlite3_result_subtype(ptr, subType)
-//	}
-//
-//	fun setResultToPointer(key: String, obj: Any) {
-//		sqlite3_result_pointer(
-//				ptr, StableRef.create(obj).asCPointer(), key,
-//				staticCFunction { it -> it!!.asStableRef<Any>().dispose()  }
-//		)
-//	}
+	fun setResultToSubType(subType: UInt) {
+		sqlite3_result_subtype(ptr, subType)
+	}
+
+	fun setResultToPointer(key: String, obj: Any) {
+		sqlite3_result_pointer(
+				ptr, StableRef.create(obj).asCPointer(), key,
+				staticCFunction { it -> it!!.asStableRef<Any>().dispose()  }
+		)
+	}
 
 	fun setResultToValue(value: SQLiteValue) {
 		sqlite3_result_value(ptr, value.ptr)

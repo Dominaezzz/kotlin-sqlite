@@ -6,20 +6,20 @@ import sqlite3.*
 inline class SQLiteStatement(val ptr: CPointer<sqlite3_stmt>) {
 	val db: SQLiteDatabase get() = SQLiteDatabase(sqlite3_db_handle(ptr)!!)
 	val sql: String get() = sqlite3_sql(ptr)!!.toKString()
-//	val expandedSql: String? get() = sqlite3_expanded_sql(ptr)?.let {
-//			try {
-//				it.toKString()
-//			} finally {
-//				sqlite3_free(it)
-//			}
-//		}
+	val expandedSql: String? get() = sqlite3_expanded_sql(ptr)?.let {
+			try {
+				it.toKString()
+			} finally {
+				sqlite3_free(it)
+			}
+		}
 	val isBusy: Boolean get() = sqlite3_stmt_busy(ptr) == 1
 	val isReadOnly: Boolean get() = sqlite3_stmt_readonly(ptr) == 1
 	val parameterCount: Int get() = sqlite3_bind_parameter_count(ptr)
 	val columnCount: Int get() = sqlite3_column_count(ptr)
 	val dataCount: Int get() = sqlite3_data_count(ptr)
 
-	fun step() : Boolean {
+	fun step(): Boolean {
 		return when (sqlite3_step(ptr)) {
 			SQLITE_ROW -> true
 			SQLITE_DONE -> false
@@ -44,11 +44,11 @@ inline class SQLiteStatement(val ptr: CPointer<sqlite3_stmt>) {
 	}
 
 	fun bind(paramIndex: Int, value: String) {
-		checkBind(sqlite3_bind_text(ptr, paramIndex, value, value.length, (-1).toLong().toCPointer()))
+		checkBind(sqlite3_bind_text(ptr, paramIndex, value, value.length, SQLITE_TRANSIENT))
 	}
 
 	fun bind(paramIndex: Int, value: ByteArray) {
-	    checkBind(sqlite3_bind_blob(ptr, paramIndex, value.refTo(0), value.size, (-1).toLong().toCPointer()))
+	    checkBind(sqlite3_bind_blob(ptr, paramIndex, value.refTo(0), value.size, SQLITE_TRANSIENT))
 	}
 
 	fun bind(paramIndex: Int, value: Double) {
@@ -67,12 +67,12 @@ inline class SQLiteStatement(val ptr: CPointer<sqlite3_stmt>) {
 		checkBind(sqlite3_bind_value(ptr, paramIndex, value.ptr))
 	}
 
-//	fun bindPointer(paramIndex: Int, key: String, value: Any) {
-//		checkBind(sqlite3_bind_pointer(
-//				ptr, paramIndex, StableRef.create(value).asCPointer(), key,
-//				staticCFunction { it -> it!!.asStableRef<Any>().dispose() }
-//		))
-//	}
+	fun bindPointer(paramIndex: Int, key: String, value: Any) {
+		checkBind(sqlite3_bind_pointer(
+				ptr, paramIndex, StableRef.create(value).asCPointer(), key,
+				staticCFunction { it -> it!!.asStableRef<Any>().dispose() }
+		))
+	}
 
 	fun bindNull(paramIndex: Int) {
 		checkBind(sqlite3_bind_null(ptr, paramIndex))
@@ -82,9 +82,9 @@ inline class SQLiteStatement(val ptr: CPointer<sqlite3_stmt>) {
 		checkBind(sqlite3_bind_zeroblob(ptr, paramIndex, count))
 	}
 
-	fun parameterName(paramIndex: Int) : String? = sqlite3_bind_parameter_name(ptr, paramIndex)?.toKString()
+	fun parameterName(paramIndex: Int): String? = sqlite3_bind_parameter_name(ptr, paramIndex)?.toKString()
 
-	fun parameterIndex(paramName: String) : Int = sqlite3_bind_parameter_index(ptr, paramName)
+	fun parameterIndex(paramName: String): Int = sqlite3_bind_parameter_index(ptr, paramName)
 
 	fun clearBindings() {
         sqlite3_clear_bindings(ptr)
@@ -95,54 +95,55 @@ inline class SQLiteStatement(val ptr: CPointer<sqlite3_stmt>) {
 		check(columnIndex in 0 until columnCount) { "Gave column index '$columnIndex', when column count is '$columnCount'." }
 	}
 
-	fun getColumnName(columnIndex: Int) : String {
+	fun getColumnName(columnIndex: Int): String {
 		checkColumnIndex(columnIndex)
 
 		return sqlite3_column_name(ptr, columnIndex)!!.toKString()
 	}
 
-	fun getColumnDeclaredType(columnIndex: Int) : String? {
+	fun getColumnDeclaredType(columnIndex: Int): String? {
 		checkColumnIndex(columnIndex)
 		
 		return sqlite3_column_decltype(ptr, columnIndex)?.toKString()
 	}
 
-	fun getColumnString(columnIndex: Int) : String? {
+	fun getColumnString(columnIndex: Int): String? {
 		checkColumnIndex(columnIndex)
 
 		return sqlite3_column_text(ptr, columnIndex)?.reinterpret<ByteVar>()?.toKString()
 	}
 
-	fun getColumnLong(columnIndex: Int) : Long {
+	fun getColumnLong(columnIndex: Int): Long {
 		checkColumnIndex(columnIndex)
 
 		return sqlite3_column_int64(ptr, columnIndex)
 	}
 
-	fun getColumnInt(columnIndex: Int) : Int {
+	fun getColumnInt(columnIndex: Int): Int {
 		checkColumnIndex(columnIndex)
 
 		return sqlite3_column_int(ptr, columnIndex)
 	}
 
-	fun getColumnDouble(columnIndex: Int) : Double {
+	fun getColumnDouble(columnIndex: Int): Double {
 		checkColumnIndex(columnIndex)
 
 		return sqlite3_column_double(ptr, columnIndex)
 	}
 
-	fun getColumnBlob(columnIndex: Int) : ByteArray? {
+	fun getColumnBlob(columnIndex: Int): ByteArray? {
 		checkColumnIndex(columnIndex)
 
 		val blob = sqlite3_column_blob(ptr, columnIndex)
 		return when {
 			blob != null -> blob.readBytes(sqlite3_column_bytes(ptr, columnIndex))
-			sqlite3_column_type(ptr, columnIndex) == SQLITE_NULL -> byteArrayOf()
+			// TODO: Make a singleton for this.
+			sqlite3_column_type(ptr, columnIndex) != SQLITE_NULL -> byteArrayOf()
 			else -> null
 		}
 	}
 
-	fun getColumnValue(columnIndex: Int) : SQLiteValue {
+	fun getColumnValue(columnIndex: Int): SQLiteValue {
 		checkColumnIndex(columnIndex)
 
 		return SQLiteValue(sqlite3_column_value(ptr, columnIndex)!!)

@@ -1,5 +1,7 @@
 package ksqlite
 
+import sqlite3.sqlite3_value_nochange
+
 interface SQLiteVirtualTable {
 	val declaration: String
 
@@ -128,7 +130,7 @@ interface SQLiteVirtualTable {
 	 * When initially opened, the cursor is in an undefined state.
 	 * The SQLite core will invoke [SQLiteVirtualTableCursor.filter] on the cursor prior to any attempt to position or read from the cursor.
 	 * */
-	fun open() : SQLiteVirtualTableCursor
+	fun open(): SQLiteVirtualTableCursor
 	/**
 	 * This method releases a connection to a virtual table. Only the sqlite3_vtab object is destroyed.
 	 * The virtual table is not destroyed and any backing store associated with the virtual table persists.
@@ -142,8 +144,8 @@ interface SQLiteVirtualTable {
 
 	// If not used then read-only.
 	interface Persist : SQLiteVirtualTable {
-		fun rename(newName: String) : Boolean = false
-		fun update(args: SQLiteValues) : Long = -1
+		fun rename(newName: String): Boolean = false
+		fun update(args: SQLiteValues): Long = -1
 		/**
 		 * This method releases a connection to a virtual table, just like the xDisconnect method,
 		 * and it also destroys the underlying table implementation.
@@ -162,7 +164,7 @@ interface SQLiteVirtualTable {
 		 * If [noChange] is invoked anywhere other than within an [update] method call for an UPDATE statement,
 		 * then the return value is arbitrary and meaningless.
 		 **/
-//		val SQLiteValue.noChange: Boolean get() = sqlite3_value_nochange(ptr) != 0
+		val SQLiteValue.noChange: Boolean get() = sqlite3_value_nochange(ptr) != 0
 	}
 
 	interface Transactions : SQLiteVirtualTable {

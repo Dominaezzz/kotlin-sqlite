@@ -7,50 +7,54 @@ import sqlite3.*
 /**
  * Note the warnings on the "estimatedRows", "idxFlags", and colUsed fields.
  * These fields were added with SQLite versions 3.8.2, 3.9.0, and 3.10.0, respectively.
- * Any extension that reads or writes these fields must first check that the version of the SQLite library in use is greater than or equal to appropriate version - perhaps comparing the value returned from sqlite3_libversion_number() against constants 3008002, 3009000, and/or 3010000.
+ * Any extension that reads or writes these fields must first check that the version of
+ * the SQLite library in use is greater than or equal to appropriate version - perhaps
+ * comparing the value returned from sqlite3_libversion_number() against constants 3008002, 3009000, and/or 3010000.
  * The result of attempting to access these fields in an sqlite3_index_info structure created by an older version of SQLite are undefined.
  * */
 class SQLiteIndexInfo(private val ptr: CPointer<sqlite3_index_info>) {
+    private inline val info: sqlite3_index_info get() = ptr.pointed
+
     /** Number used to identify the index */
     var indexNumber: Int
-        get() = ptr.pointed.idxNum
-        set(value) { ptr.pointed.idxNum = value }
+        get() = info.idxNum
+        set(value) { info.idxNum = value }
 
     /***/
     var idxStr: String?
-        get() = ptr.pointed.idxStr?.toKString()
+        get() = info.idxStr?.toKString()
         set(value) {
-            if (ptr.pointed.needToFreeIdxStr == 1) {
-                sqlite3_free(ptr.pointed.idxStr)
+            if (info.needToFreeIdxStr == 1) {
+                sqlite3_free(info.idxStr)
             }
-            ptr.pointed.idxStr = value?.let { sqlite3_mprintf(it) }
-            ptr.pointed.needToFreeIdxStr = if (value != null) 1 else 0
+            info.idxStr = value?.let { sqlite3_mprintf(it) }
+            info.needToFreeIdxStr = if (value != null) 1 else 0
         }
 
     /** True if output is already ordered */
     var orderByConsumed: Boolean
-        get() = ptr.pointed.orderByConsumed == 1
-        set(value) { ptr.pointed.orderByConsumed = if (value) 1 else 0 }
+        get() = info.orderByConsumed == 1
+        set(value) { info.orderByConsumed = if (value) 1 else 0 }
 
     /** Estimated cost of using this index */
     var estimatedCost: Double
-        get() = ptr.pointed.estimatedCost
-        set(value) { ptr.pointed.estimatedCost = value }
+        get() = info.estimatedCost
+        set(value) { info.estimatedCost = value }
 
     /** Estimated number of rows returned. (Only available in SQLite 3.8.2 and later) */
     var estimatedRows: Long
-        get() = ptr.pointed.estimatedRows
-        set(value) { ptr.pointed.estimatedRows = value }
+        get() = info.estimatedRows
+        set(value) { info.estimatedRows = value }
 
-//    /** Mask of SQLITE_INDEX_SCAN_* flags. (Only available in SQLite 3.9.0 and later) */
-//    var idxFlags: Int
-//        get() = ptr.pointed.idxFlags
-//        set(value) { ptr.pointed.idxFlags = value }
-//
-//    /** Input: Mask of columns used by statement. (Only available in SQLite 3.10.0 and later) */
-//    var columnsUsed: ULong
-//        get() = ptr.pointed.colUsed
-//        set(value) { ptr.pointed.colUsed = value}
+    /** Mask of SQLITE_INDEX_SCAN_* flags. (Only available in SQLite 3.9.0 and later) */
+    var idxFlags: Int
+        get() = info.idxFlags
+        set(value) { info.idxFlags = value }
+
+    /** Input: Mask of columns used by statement. (Only available in SQLite 3.10.0 and later) */
+    var columnsUsed: ULong
+        get() = info.colUsed
+        set(value) { info.colUsed = value}
 }
 
 enum class ConstraintOp(val value: UByte) {
@@ -60,35 +64,36 @@ enum class ConstraintOp(val value: UByte) {
     LT(SQLITE_INDEX_CONSTRAINT_LT.toUByte()),
     GE(SQLITE_INDEX_CONSTRAINT_GE.toUByte()),
     MATCH(SQLITE_INDEX_CONSTRAINT_MATCH.toUByte()),
-//    /** 3.10.0 and later */
-//    LIKE(SQLITE_INDEX_CONSTRAINT_LIKE.toUByte()),
-//
-//    /** 3.10.0 and later */
-//    GLOB(SQLITE_INDEX_CONSTRAINT_GLOB.toUByte()),
-//
-//    /** 3.10.0 and later */
-//    REGEXP(SQLITE_INDEX_CONSTRAINT_REGEXP.toUByte()),
-//
-//    /** 3.21.0 and later */
-//    NE(SQLITE_INDEX_CONSTRAINT_NE.toUByte()),
-//
-//    /** 3.21.0 and later */
-//    ISNOT(SQLITE_INDEX_CONSTRAINT_ISNOT.toUByte()),
-//
-//    /** 3.21.0 and later */
-//    ISNOTNULL(SQLITE_INDEX_CONSTRAINT_ISNOTNULL.toUByte()),
-//
-//    /** 3.21.0 and later */
-//    ISNULL(SQLITE_INDEX_CONSTRAINT_ISNULL.toUByte()),
-//
-//    /** 3.21.0 and later */
-//    IS(SQLITE_INDEX_CONSTRAINT_IS.toUByte()),
-//
-////		/** 3.25.0 and later */
-////		FUNCTION(SQLITE_INDEX_CONSTRAINT_FUNCTION),
-//
-//    /** Scan visits at most 1 row */
-//    SCAN_UNIQUE(SQLITE_INDEX_SCAN_UNIQUE.toUByte())
+
+    /** 3.10.0 and later */
+    LIKE(SQLITE_INDEX_CONSTRAINT_LIKE.toUByte()),
+
+    /** 3.10.0 and later */
+    GLOB(SQLITE_INDEX_CONSTRAINT_GLOB.toUByte()),
+
+    /** 3.10.0 and later */
+    REGEXP(SQLITE_INDEX_CONSTRAINT_REGEXP.toUByte()),
+
+    /** 3.21.0 and later */
+    NE(SQLITE_INDEX_CONSTRAINT_NE.toUByte()),
+
+    /** 3.21.0 and later */
+    ISNOT(SQLITE_INDEX_CONSTRAINT_ISNOT.toUByte()),
+
+    /** 3.21.0 and later */
+    ISNOTNULL(SQLITE_INDEX_CONSTRAINT_ISNOTNULL.toUByte()),
+
+    /** 3.21.0 and later */
+    ISNULL(SQLITE_INDEX_CONSTRAINT_ISNULL.toUByte()),
+
+    /** 3.21.0 and later */
+    IS(SQLITE_INDEX_CONSTRAINT_IS.toUByte()),
+
+    /** 3.25.0 and later */
+    FUNCTION(SQLITE_INDEX_CONSTRAINT_FUNCTION.toUByte()),
+
+    /** Scan visits at most 1 row */
+    SCAN_UNIQUE(SQLITE_INDEX_SCAN_UNIQUE.toUByte())
 }
 
 inline class Constraint(private val constraint: CPointer<sqlite3_index_constraint>) {

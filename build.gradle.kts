@@ -10,6 +10,7 @@ plugins {
 	id("com.jfrog.bintray") version("1.8.4-jetbrains-3")
 	id("de.undercouch.download") version("3.4.3")
 }
+
 repositories {
     mavenCentral()
 }

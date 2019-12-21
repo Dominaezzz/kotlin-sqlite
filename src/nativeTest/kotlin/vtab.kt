@@ -58,12 +58,11 @@ object StringSplitter : SQLiteModule {
 }
 
 @Test
-@Ignore
 fun `Custom Table Valued Function`() {
-	withSqlite(":memory:") { db ->
+	usingSqlite(":memory:") { db ->
 		db.createModule("split_string", StringSplitter)
 
-		db.withStmt("SELECT value FROM split_string('Mine,Is,Now,Separated', ',');") { stmt ->
+		db.usingStmt("SELECT value FROM split_string('Mine,Is,Now,Separated', ',');") { stmt ->
 			assert(stmt.step())
 			assertEquals("Mine", stmt.getColumnString(0))
 			assert(stmt.step())
@@ -75,7 +74,7 @@ fun `Custom Table Valued Function`() {
 			assert(!stmt.step())
 		}
 
-		db.withStmt("""
+		db.usingStmt("""
 			SELECT t1.value, t2.value
 			FROM split_string('X.Y.Z', '.') AS t1
 			JOIN split_string('A-B-C', '-') AS t2;
