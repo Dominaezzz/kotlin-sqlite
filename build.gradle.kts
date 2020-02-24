@@ -85,6 +85,7 @@ subprojects {
 			}
 
 			publications.withType<MavenPublication> {
+				artifactId = "kotlin-sqlite-$artifactId"
 				pom {
 					name.set(project.name)
 					description.set(project.description)
