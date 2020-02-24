@@ -13,7 +13,7 @@ fun `But... does it work?`() {
 
 @Test
 fun `Store and load BLOB`() {
-	usingSqlite("temp.db") { db ->
+	usingSqlite(":memory:") { db ->
 		db.usingStmt("SELECT ?;") { stmt ->
 			val expected = byteArrayOf(1, 2, 3, 0, 6, 5, 4)
 
@@ -35,7 +35,7 @@ fun `Custom Scalar Function`() {
 		}
 	}
 
-	usingSqlite("temp.db") { db ->
+	usingSqlite(":memory:") { db ->
 		db.createFunction("LOL", 0, lol)
 
 		lateinit var output: String
@@ -65,7 +65,7 @@ fun `Custom Aggregate Function`() {
 		}
 	}
 
-	usingSqlite("temp.db") { db ->
+	usingSqlite(":memory:") { db ->
 		db.createFunction("LOL", 1, lol)
 
 		lateinit var output: String

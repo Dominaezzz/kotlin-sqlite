@@ -1,6 +1,6 @@
 # kotlin-sqlite
 
-[![Build Status](https://dev.azure.com/dominicfischer7/kotlin-sqlite/_apis/build/status/Dominaezzz.kotlin-sqlite?branchName=master)](https://dev.azure.com/dominicfischer7/kotlin-sqlite/_build/latest?definitionId=3&branchName=master)
+[![](https://github.com/Dominaezzz/kotlin-sqlite/workflows/Build/badge.svg)](https://github.com/Dominaezzz/kotlin-sqlite/actions)
 [![Download](https://api.bintray.com/packages/dominaezzz/kotlin-native/kotlin-sqlite/images/download.svg)](https://bintray.com/dominaezzz/kotlin-native/kotlin-sqlite/_latestVersion)
 
 [Kotlin/Native](https://github.com/JetBrains/kotlin-native) bindings to the
@@ -9,6 +9,7 @@
 SQLite is an in-process library that implements a self-contained, serverless, zero-configuration, transactional SQL database engine. The code for SQLite is in the public domain and is thus free for use for any purpose, commercial or private.
 
 This library allows for 'kotlinified' use of SQLite and is based on the kotlinconf-spinner [SQLite example](https://github.com/JetBrains/kotlinconf-spinner/tree/master/kotlin-native/samples/fullstack/sql).
+The aim is to eventually wrap all of SQLite in Kotlin (Native, JVM, etc).
 
 ## Examples
 
