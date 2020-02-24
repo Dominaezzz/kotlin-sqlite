@@ -93,7 +93,11 @@ kotlin {
 				}
 				cinterops.create("sqlite3") {
 					includeDirs(sqliteSrcFolder)
-					tasks[interopProcessingTaskName].dependsOn(unzipSQLiteSources)
+					val cInteropTask = tasks[interopProcessingTaskName]
+					cInteropTask.dependsOn(unzipSQLiteSources)
+					compileSQLite.configure {
+						dependsOn(cInteropTask)
+					}
 				}
 				kotlinOptions {
 					compileKotlinTask.dependsOn(archiveSQLite)
