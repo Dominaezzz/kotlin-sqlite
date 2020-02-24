@@ -34,7 +34,7 @@ val toolChainFolderName = when {
 	HostManager.hostIsMingw -> "msys2-mingw-w64-x86_64-clang-llvm-lld-compiler_rt-8.0.1"
 	else -> TODO()
 }
-val llvmBinFolder = konanUserDir.resolve("dependencies/${toolChainFolderName}/bin")
+val llvmBinFolder = konanDeps.resolve("${toolChainFolderName}/bin")
 
 val compileSQLite by tasks.registering(Exec::class) {
 	dependsOn(unzipSQLiteSources)
