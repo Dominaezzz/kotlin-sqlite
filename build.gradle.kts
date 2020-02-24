@@ -8,7 +8,7 @@ plugins {
 	id("de.undercouch.download") version("4.0.4") apply false
 }
 
-val isIdeaActive = System.getProperty("idea.active") == "true"
+val useSingleTarget: Boolean by extra(System.getProperty("idea.active") == "true")
 
 val stdout = ByteArrayOutputStream()
 exec {

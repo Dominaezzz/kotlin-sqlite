@@ -10,7 +10,7 @@ plugins {
 }
 
 val sqliteVersion = "3310100"
-val isIdeaActive = System.getProperty("idea.active") == "true"
+val useSingleTarget: Boolean by rootProject.extra
 
 val sqliteSrcFolder = buildDir.resolve("sqlite_src/sqlite-amalgamation-$sqliteVersion")
 
@@ -81,9 +81,9 @@ val archiveSQLite by tasks.registering(Exec::class) {
 }
 
 kotlin {
-	if (HostManager.hostIsMingw || !isIdeaActive) mingwX64()
-	if (HostManager.hostIsLinux || !isIdeaActive) linuxX64()
-	if (HostManager.hostIsMac || !isIdeaActive) macosX64()
+	if (HostManager.hostIsMingw || !useSingleTarget) mingwX64()
+	if (HostManager.hostIsLinux || !useSingleTarget) linuxX64()
+	if (HostManager.hostIsMac || !useSingleTarget) macosX64()
 
 	targets.withType<KotlinNativeTarget> {
 		compilations {
