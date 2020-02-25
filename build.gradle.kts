@@ -35,37 +35,6 @@ subprojects {
 					useExperimentalAnnotation("kotlin.ExperimentalUnsignedTypes")
 				}
 			}
-
-			// Hack until https://youtrack.jetbrains.com/issue/KT-30498
-			targets.filterIsInstance<KotlinNativeTarget>()
-					.filter { it.konanTarget != HostManager.host }
-					.forEach { target ->
-						configure(target.compilations) {
-							configure(cinterops) {
-								tasks[interopProcessingTaskName].enabled = false
-							}
-
-							compileKotlinTask.enabled = false
-						}
-						configure(target.binaries) {
-							linkTask.enabled = false
-						}
-
-						target.mavenPublication(Action {
-							val publicationToDisable = this
-
-							tasks.withType<AbstractPublishToMaven> {
-								onlyIf {
-									publication != publicationToDisable
-								}
-							}
-							tasks.withType<GenerateModuleMetadata> {
-								onlyIf {
-									publication.get() != publicationToDisable
-								}
-							}
-						})
-					}
 		}
 
 		configure<PublishingExtension> {
