@@ -5,7 +5,6 @@ import sqlite3.*
 
 inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 	val fileName: String? get() = sqlite3_db_filename(ptr, "main")?.toKString()
-	val version: String get() = sqlite3_version.toKString()
 	val errorMessage: String? get() = sqlite3_errmsg(ptr)?.toKString()
 	val lastInsertRowId: Long get() = sqlite3_last_insert_rowid(ptr)
 	val changes: Int get() = sqlite3_changes(ptr)
@@ -345,6 +344,8 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 	}
 
 	companion object {
+		val version: String get() = sqlite3_version.toKString()
+
 		fun open(path: String = ":memory:"): SQLiteDatabase {
 			return memScoped {
 				val dbPtr = alloc<CPointerVar<sqlite3>>()

@@ -147,7 +147,7 @@ fun testStatementQuery(db: SQLiteDatabase) {
 
 fun main(args: Array<String>) {
 	usingSqlite("temp.db") { db ->
-		println("SQLite Version: ${db.version}")
+		println("SQLite Version: ${SQLiteDatabase.version}")
 
 		initdb(db)
 
