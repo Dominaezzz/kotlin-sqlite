@@ -50,7 +50,6 @@ fun `Custom Scalar Function`() {
 }
 
 @Test
-@Ignore
 fun `Custom Aggregate Function`() {
 	data class LOLContext(var product: Int)
 
