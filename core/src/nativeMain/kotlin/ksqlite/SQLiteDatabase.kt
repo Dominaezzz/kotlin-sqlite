@@ -118,7 +118,7 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 			}
 		}
 
-		val rawModule = nativeHeap.alloc<sqlite3_module>()
+		val rawModule = SQLiteHeap.alloc<sqlite3_module>()
 		rawModule.xConnect = staticCFunction { dbPtr, pAux, argc, argv, ppVTab, pzErr ->
 			val (moduleObj, _) = pAux!!.asStableRef<Pair<SQLiteModule, sqlite3_module>>().get()
 			val vTabObj: SQLiteVirtualTable
@@ -130,14 +130,14 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 				return@staticCFunction SQLITE_ERROR
 			}
 
-			ppVTab!!.pointed.value = nativeHeap.alloc<ksqlite_vtab>().apply {
+			ppVTab!!.pointed.value = SQLiteHeap.alloc<ksqlite_vtab>().apply {
 				userObj = StableRef.create(vTabObj).asCPointer()
 			}.reinterpret<sqlite3_vtab>().ptr
 			SQLITE_OK
 		}
 		rawModule.xDisconnect = staticCFunction { pVTab ->
 			val ref = pVTab!!.reinterpret<ksqlite_vtab>().pointed.userObj!!.asStableRef<SQLiteVirtualTable>()
-			nativeHeap.free(pVTab)
+			SQLiteHeap.free(pVTab)
 			val vTab = ref.get()
 			ref.dispose()
 
@@ -160,7 +160,7 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 					return@staticCFunction SQLITE_ERROR
 				}
 
-				ppVTab!!.pointed.value = nativeHeap.alloc<ksqlite_vtab>().run {
+				ppVTab!!.pointed.value = SQLiteHeap.alloc<ksqlite_vtab>().run {
 					userObj = StableRef.create(vTabObj).asCPointer()
 					reinterpret<sqlite3_vtab>().ptr
 				}
@@ -170,7 +170,7 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 			// This is required though....
 			rawModule.xDestroy = staticCFunction { pVTab ->
 				val ref = pVTab!!.reinterpret<ksqlite_vtab>().pointed.userObj!!.asStableRef<SQLiteVirtualTable.Persist>()
-				nativeHeap.free(pVTab)
+				SQLiteHeap.free(pVTab)
 				val vTabObj = ref.get()
 				ref.dispose()
 
@@ -234,7 +234,7 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 				return@staticCFunction SQLITE_ERROR
 			}
 
-			ppCursor!!.pointed.value = nativeHeap.alloc<ksqlite_vtab_cursor>().apply {
+			ppCursor!!.pointed.value = SQLiteHeap.alloc<ksqlite_vtab_cursor>().apply {
 				userObj = StableRef.create(virtualTableCursor).asCPointer()
 			}.reinterpret<sqlite3_vtab_cursor>().ptr
 
@@ -242,7 +242,7 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 		}
 		rawModule.xClose = staticCFunction { pCursor ->
 			val ref = pCursor!!.reinterpret<ksqlite_vtab_cursor>().pointed.userObj!!.asStableRef<SQLiteVirtualTableCursor>()
-			nativeHeap.free(pCursor)
+			SQLiteHeap.free(pCursor)
 			val virtualTableCursor = ref.get()
 			ref.dispose()
 
@@ -323,7 +323,7 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 				StableRef.create(module to rawModule).asCPointer(),
 				staticCFunction { ptr ->
 					with(ptr!!.asStableRef<Pair<SQLiteModule, sqlite3_module>>()) {
-						nativeHeap.free(get().second)
+						SQLiteHeap.free(get().second)
 						dispose()
 					}
 				}
