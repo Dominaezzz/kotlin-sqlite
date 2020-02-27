@@ -223,10 +223,10 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 
 			try {
 				virtualTable.bestIndex(
-						Array(indexInfo.nConstraint) { Constraint(indexInfo.aConstraint!![it].ptr) },
-						Array(indexInfo.nOrderBy) { OrderBy(indexInfo.aOrderBy!![it].ptr) },
-						Array(indexInfo.nConstraint) { ConstraintUsage(indexInfo.aConstraintUsage!![it].ptr) },
-						SQLiteIndexInfo(pIndexInfo)
+						Array(indexInfo.nConstraint) { IndexConstraint(indexInfo.aConstraint!![it].ptr) },
+						Array(indexInfo.nOrderBy) { IndexOrderBy(indexInfo.aOrderBy!![it].ptr) },
+						Array(indexInfo.nConstraint) { IndexConstraintUsage(indexInfo.aConstraintUsage!![it].ptr) },
+						IndexInfo(pIndexInfo)
 				)
 				SQLITE_OK
 			} catch (t: Throwable) {
@@ -355,6 +355,8 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 
 	companion object {
 		val version: String get() = sqlite3_version.toKString()
+		val libVersion: String get() = sqlite3_libversion()!!.toKString()
+		val libVersionNumber: Int get() = sqlite3_libversion_number()
 
 		fun open(path: String = ":memory:"): SQLiteDatabase {
 			return memScoped {

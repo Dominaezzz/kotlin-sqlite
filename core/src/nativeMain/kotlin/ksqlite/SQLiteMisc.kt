@@ -12,7 +12,7 @@ import sqlite3.*
  * comparing the value returned from sqlite3_libversion_number() against constants 3008002, 3009000, and/or 3010000.
  * The result of attempting to access these fields in an sqlite3_index_info structure created by an older version of SQLite are undefined.
  * */
-class SQLiteIndexInfo(private val ptr: CPointer<sqlite3_index_info>) {
+class IndexInfo(private val ptr: CPointer<sqlite3_index_info>) {
     private inline val info: sqlite3_index_info get() = ptr.pointed
 
     /** Number used to identify the index */
@@ -57,7 +57,7 @@ class SQLiteIndexInfo(private val ptr: CPointer<sqlite3_index_info>) {
         set(value) { info.colUsed = value}
 }
 
-enum class ConstraintOp(val value: UByte) {
+enum class IndexConstraintOp(val value: UByte) {
     EQ(SQLITE_INDEX_CONSTRAINT_EQ.toUByte()),
     GT(SQLITE_INDEX_CONSTRAINT_GT.toUByte()),
     LE(SQLITE_INDEX_CONSTRAINT_LE.toUByte()),
@@ -96,7 +96,7 @@ enum class ConstraintOp(val value: UByte) {
     SCAN_UNIQUE(SQLITE_INDEX_SCAN_UNIQUE.toUByte())
 }
 
-inline class Constraint(private val constraint: CPointer<sqlite3_index_constraint>) {
+inline class IndexConstraint(private val constraint: CPointer<sqlite3_index_constraint>) {
     /** Column constrained.  -1 for ROWID */
     val columnIndex: Int get() = constraint.pointed.iColumn
 
@@ -107,12 +107,12 @@ inline class Constraint(private val constraint: CPointer<sqlite3_index_constrain
     val usable: Boolean get() = constraint.pointed.usable != 0.toUByte()
 }
 
-inline class OrderBy(private val orderBy: CPointer<sqlite3_index_orderby>) {
+inline class IndexOrderBy(private val orderBy: CPointer<sqlite3_index_orderby>) {
     val columnIndex: Int get() = orderBy.pointed.iColumn
     val isDesc: Boolean get() = orderBy.pointed.desc != 0.toUByte()
 }
 
-inline class ConstraintUsage(private val constraintUsage: CPointer<sqlite3_index_constraint_usage>) {
+inline class IndexConstraintUsage(private val constraintUsage: CPointer<sqlite3_index_constraint_usage>) {
     /** if >0, constraint is part of argv to xFilter */
     var argvIndex: Int
         get() = constraintUsage.pointed.argvIndex

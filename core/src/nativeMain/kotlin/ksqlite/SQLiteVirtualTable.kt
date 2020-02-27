@@ -120,7 +120,7 @@ interface SQLiteVirtualTable {
 	 *
 	 * @param[constraints] Table of WHERE clause constraints.
 	 * */
-	fun bestIndex(constraints: Array<Constraint>, orderBys: Array<OrderBy>, constraintUsages: Array<ConstraintUsage>, info: SQLiteIndexInfo)
+	fun bestIndex(constraints: Array<IndexConstraint>, orderBys: Array<IndexOrderBy>, constraintUsages: Array<IndexConstraintUsage>, info: IndexInfo)
 	/**
 	 * This method creates a new cursor used for accessing (read and/or writing) a virtual table.
 	 * A successful invocation of this method will return an instance of [SQLiteVirtualTableCursor].
