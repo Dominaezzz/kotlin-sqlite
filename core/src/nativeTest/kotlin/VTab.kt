@@ -5,10 +5,9 @@ object StringSplitter : SQLiteModule {
 	override fun connect(db: SQLiteDatabase, args: Array<String>) = SplitResult
 
 	object SplitResult : SQLiteVirtualTable {
-		override val declaration : String
-			get() = "CREATE TABLE x(value, input hidden, delimiter hidden)"
+		override val declaration: String get() = "CREATE TABLE x(value, input hidden, delimiter hidden)"
 
-		override fun open() : SQLiteVirtualTableCursor = SplitResultCursor()
+		override fun open(): SQLiteVirtualTableCursor = SplitResultCursor()
 
 		override fun bestIndex(constraints: Array<Constraint>, orderBys: Array<OrderBy>, constraintUsages: Array<ConstraintUsage>, info: SQLiteIndexInfo) {
 			constraintUsages[0].argvIndex = 1
@@ -30,11 +29,10 @@ object StringSplitter : SQLiteModule {
 			lateinit var delimiter: String
 			lateinit var results: List<String>
 			override var rowId: Long = 0
-			override val eof: Boolean
-				get() = rowId >= results.size
+			override val eof: Boolean get() = rowId >= results.size
 
 			override fun filter(idxNum: Int, idxStr: String?, args: SQLiteValues) {
-				if (args.size != 2) throw Exception("Invalid")
+				require(args.size == 2)
 
 				input = args[0].asString()!!
 				delimiter = args[1].asString()!!
