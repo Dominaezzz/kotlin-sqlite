@@ -42,6 +42,16 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 		SQLiteStatement(stmtPtr.value!!) to tailPtr.value?.toKString()
 	}
 
+	fun prepare(sql: String, prepFlags: Flag<SQLitePrepare>): Pair<SQLiteStatement, String?> = memScoped {
+		val tailPtr = alloc<CPointerVar<ByteVar>>()
+		val stmtPtr = alloc<CPointerVar<sqlite3_stmt>>()
+		val result = sqlite3_prepare_v3(ptr, sql.cstr.ptr, sql.length, prepFlags.value.convert(), stmtPtr.ptr, tailPtr.ptr)
+		if (result != SQLITE_OK) {
+			throw SQLiteError("Cannot prepare statement: ${sqlite3_errstr(result)?.toKString()}, $errorMessage")
+		}
+		SQLiteStatement(stmtPtr.value!!) to tailPtr.value?.toKString()
+	}
+
 	fun createFunction(name: String, nArg: Int, function: (SQLiteValues, SQLiteContext) -> Unit) {
 		val result = sqlite3_create_function_v2(
 			ptr, name, nArg, SQLITE_UTF8, StableRef.create(function).asCPointer(),
@@ -349,7 +359,17 @@ inline class SQLiteDatabase(val ptr: CPointer<sqlite3>) {
 		fun open(path: String = ":memory:"): SQLiteDatabase {
 			return memScoped {
 				val dbPtr = alloc<CPointerVar<sqlite3>>()
-				if (sqlite3_open_v2(path, dbPtr.ptr, SQLITE_OPEN_READWRITE or SQLITE_OPEN_CREATE, null) != 0) {
+				if (sqlite3_open(path, dbPtr.ptr) != 0) {
+					throw SQLiteError("Cannot open dbPtr: ${sqlite3_errmsg(dbPtr.value)?.toKString()}")
+				}
+				SQLiteDatabase(dbPtr.value!!)
+			}
+		}
+
+		fun open(path: String = ":memory:", flags: Flag<SQLiteOpen>, zVfs: String? = null): SQLiteDatabase {
+			return memScoped {
+				val dbPtr = alloc<CPointerVar<sqlite3>>()
+				if (sqlite3_open_v2(path, dbPtr.ptr, flags.value, zVfs) != 0) {
 					throw SQLiteError("Cannot open dbPtr: ${sqlite3_errmsg(dbPtr.value)?.toKString()}")
 				}
 				SQLiteDatabase(dbPtr.value!!)
