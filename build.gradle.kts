@@ -1,10 +1,9 @@
 import java.io.ByteArrayOutputStream
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.konan.target.HostManager
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
 plugins {
-    kotlin("multiplatform") version("1.3.61") apply false
+    kotlin("multiplatform") version("1.3.70") apply false
 	id("de.undercouch.download") version("4.0.4") apply false
 }
 
