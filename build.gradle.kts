@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.konan.target.HostManager
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
 plugins {
-    kotlin("multiplatform") version("1.3.70") apply false
+    kotlin("multiplatform") version("1.3.71") apply false
 	id("de.undercouch.download") version("4.0.4") apply false
 }
 
